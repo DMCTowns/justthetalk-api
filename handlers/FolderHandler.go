@@ -1,0 +1,360 @@
+// This file is part of the JUSTtheTalkAPI distribution (https://github.com/jdudmesh/justthetalk-api).
+// Copyright (c) 2021 John Dudmesh.
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, version 3.
+
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+package handlers
+
+import (
+	"encoding/json"
+	"justthetalk/businesslogic"
+	"justthetalk/model"
+	"justthetalk/utils"
+	"net/http"
+
+	"github.com/jinzhu/copier"
+	"gorm.io/gorm"
+)
+
+type FolderHandler struct {
+	userCache         *businesslogic.UserCache
+	folderCache       *businesslogic.FolderCache
+	discussionCache   *businesslogic.DiscussionCache
+	bookmarkProcessor *businesslogic.BookmarkProcessor
+	postProcessor     *businesslogic.PostProcessor
+}
+
+func NewFolderHandler(userCache *businesslogic.UserCache, folderCache *businesslogic.FolderCache, discussionCache *businesslogic.DiscussionCache, bookmarkCache *businesslogic.BookmarkProcessor, postProcessor *businesslogic.PostProcessor) *FolderHandler {
+
+	return &FolderHandler{
+		userCache:         userCache,
+		folderCache:       folderCache,
+		discussionCache:   discussionCache,
+		bookmarkProcessor: bookmarkCache,
+		postProcessor:     postProcessor,
+	}
+
+}
+
+func (h *FolderHandler) GetFolders(res http.ResponseWriter, req *http.Request) {
+	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		var data []*model.Folder
+		for _, folder := range h.folderCache.Entries() {
+			shouldAdd := folder.Type == model.FolderTypeNormal || (user != nil && user.IsAdmin)
+			if shouldAdd {
+				data = append(data, folder)
+			}
+		}
+
+		return http.StatusOK, data, ""
+
+	})
+}
+
+func (h *FolderHandler) GetFolder(res http.ResponseWriter, req *http.Request) {
+	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		folder := h.folderCache.Get(folderId, user)
+
+		if folder.Type == model.FolderTypeNormal {
+			return http.StatusOK, folder, ""
+		} else {
+			if user != nil && user.IsAdmin {
+				return http.StatusOK, folder, ""
+			} else {
+				panic(utils.ErrForbidden)
+			}
+		}
+
+	})
+}
+
+func (h *FolderHandler) GetDiscussions(res http.ResponseWriter, req *http.Request) {
+	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		pageSize, pageStart := utils.ExtractPageSizeAndStart(req)
+
+		folder := h.folderCache.Get(folderId, user)
+
+		discussions := businesslogic.GetDiscussions(folder, pageStart, pageSize, user, db)
+
+		return http.StatusOK, discussions, ""
+
+	})
+}
+
+func (h *FolderHandler) CreateDiscussion(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		folder := h.folderCache.Get(folderId, user)
+
+		var discussion model.Discussion
+		if err := json.NewDecoder(req.Body).Decode(&discussion); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+
+		created := businesslogic.CreateDiscussion(folder, &discussion, user, h.userCache, h.discussionCache, db)
+
+		return http.StatusOK, created, ""
+
+	})
+}
+
+func (h *FolderHandler) GetDiscussion(res http.ResponseWriter, req *http.Request) {
+	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		discussionId := utils.ExtractVarInt("discussionId", req)
+
+		folder := h.folderCache.Get(folderId, user)
+		discussion := h.discussionCache.Get(discussionId, user)
+
+		if discussion == nil {
+			panic(utils.ErrNotFound)
+		}
+
+		if discussion.FolderId != folder.Id {
+			panic(utils.ErrBadRequest)
+		}
+
+		discussion.IsSubscribed = h.userCache.GetDiscussionSubscriptionStatus(discussion, user)
+		discussion.IsBlocked = h.discussionCache.IsBlocked(discussion, user)
+
+		return http.StatusOK, discussion, ""
+
+	})
+}
+
+func (h *FolderHandler) EditDiscussion(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		discussionId := utils.ExtractVarInt("discussionId", req)
+
+		folder := h.folderCache.Get(folderId, user)
+
+		var discussion model.Discussion
+		if err := json.NewDecoder(req.Body).Decode(&discussion); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+		discussion.Id = discussionId
+
+		edited := businesslogic.EditDiscussion(folder, &discussion, user, h.discussionCache, db)
+
+		return http.StatusOK, edited, ""
+
+	})
+}
+
+func (h *FolderHandler) DeleteDiscussion(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		discussionId := utils.ExtractVarInt("discussionId", req)
+
+		folder := h.folderCache.Get(folderId, user)
+
+		discussion := h.discussionCache.Get(discussionId, user)
+		if discussion == nil {
+			panic(utils.ErrNotFound)
+		}
+
+		deleted := businesslogic.DeleteDiscussion(folder, discussion, user, db)
+
+		h.discussionCache.Put(deleted)
+
+		return http.StatusOK, deleted, ""
+
+	})
+}
+
+func (h *FolderHandler) GetPosts(res http.ResponseWriter, req *http.Request) {
+	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		var lastBookmark *model.UserDiscussionBookmark
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		discussionId := utils.ExtractVarInt("discussionId", req)
+
+		pageSize := 0
+		pageStart := 1
+
+		startParam := req.URL.Query().Get("start")
+		if len(startParam) > 0 {
+			pageStart = utils.ExtractQueryInt("start", req)
+		} else if user != nil {
+			sidebandData := h.userCache.GetSidebandData(user.Id)
+			if lastBookmark, exists := sidebandData.DiscussionBookmarks[discussionId]; exists {
+				pageStart = int(lastBookmark.LastPostCount)
+			}
+		}
+
+		if pageStart < pageSize {
+			pageStart = 0
+		}
+
+		pageSize = utils.ExtractQueryInt("size", req)
+
+		folder := h.folderCache.Get(folderId, user)
+		discussion := h.discussionCache.Get(discussionId, user)
+
+		posts := businesslogic.GetPosts(folder, discussion, user, pageStart, pageSize, db)
+
+		if user != nil && len(posts) > 0 {
+			lastPost := posts[len(posts)-1]
+			if lastBookmark == nil || lastPost.PostNum > lastBookmark.LastPostCount {
+				nextBookmark := &model.UserDiscussionBookmark{
+					DiscussionId:  lastPost.DiscussionId,
+					UserId:        user.Id,
+					LastPostId:    lastPost.Id,
+					LastPostCount: lastPost.PostNum,
+					LastPostDate:  lastPost.CreatedDate,
+				}
+				h.bookmarkProcessor.Update(nextBookmark)
+			}
+		}
+
+		return http.StatusOK, posts, ""
+
+	})
+}
+
+func (h *FolderHandler) CreatePost(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		discussionId := utils.ExtractVarInt("discussionId", req)
+
+		var post model.Post
+		if err := json.NewDecoder(req.Body).Decode(&post); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+
+		folder := h.folderCache.Get(folderId, user)
+		discussion := h.discussionCache.Get(discussionId, user)
+
+		created := businesslogic.CreatePost(folder, discussion, user, &post, h.discussionCache, h.userCache, db)
+		h.postProcessor.PublishPost(created)
+
+		sidebandData := h.userCache.GetSidebandData(user.Id)
+		returnPostsFromPostNum := created.PostNum
+		if lastBookmark, exists := sidebandData.DiscussionBookmarks[discussion.Id]; exists {
+			returnPostsFromPostNum = lastBookmark.LastPostCount + 1
+		}
+
+		posts := businesslogic.GetPosts(folder, discussion, user, int(returnPostsFromPostNum), 20, db)
+
+		lastPost := posts[len(posts)-1]
+		nextBookmark := &model.UserDiscussionBookmark{
+			DiscussionId:  discussion.Id,
+			UserId:        user.Id,
+			LastPostId:    lastPost.Id,
+			LastPostCount: lastPost.PostNum,
+			LastPostDate:  lastPost.CreatedDate,
+		}
+		h.bookmarkProcessor.Update(nextBookmark)
+
+		return http.StatusOK, posts, ""
+
+	})
+}
+
+func (h *FolderHandler) EditPost(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		discussionId := utils.ExtractVarInt("discussionId", req)
+		postId := utils.ExtractVarInt("postId", req)
+
+		folder := h.folderCache.Get(folderId, user)
+		discussion := h.discussionCache.Get(discussionId, user)
+
+		var post model.Post
+		if err := json.NewDecoder(req.Body).Decode(&post); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+
+		post.Id = postId
+
+		updated := businesslogic.EditPost(folder, discussion, user, &post, db)
+
+		h.postProcessor.PublishPost(updated)
+
+		return http.StatusOK, updated, ""
+
+	})
+}
+
+func (h *FolderHandler) DeletePost(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		discussionId := utils.ExtractVarInt("discussionId", req)
+		postId := utils.ExtractVarInt("postId", req)
+
+		folder := h.folderCache.Get(folderId, user)
+		discussion := h.discussionCache.Get(discussionId, user)
+
+		updated := businesslogic.DeletePost(folder, discussion, user, postId, db)
+
+		h.postProcessor.PublishPost(updated)
+
+		return http.StatusOK, updated, ""
+
+	})
+}
+
+func (h *FolderHandler) SubscribeToDiscussion(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		discussionId := utils.ExtractVarInt("discussionId", req)
+		discussion := h.discussionCache.Get(discussionId, user)
+
+		if req.Method == http.MethodPost {
+			businesslogic.SetDiscussionSubscriptionStatus(discussion, user, db, h.userCache)
+		} else {
+			businesslogic.UnsetDiscussionSubscriptionStatus(discussion, user, db, h.userCache)
+		}
+
+		discussion.IsSubscribed = h.userCache.GetDiscussionSubscriptionStatus(discussion, user)
+
+		return http.StatusOK, discussion, ""
+
+	})
+}
+
+func (h *FolderHandler) SubscribeToFolder(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		folderId := utils.ExtractVarInt("folderId", req)
+		folder := h.folderCache.Get(folderId, user)
+
+		if req.Method == http.MethodPost {
+			businesslogic.SetFolderSubscriptionStatus(folder, user, db, h.userCache)
+		} else {
+			businesslogic.UnsetFolderSubscriptionStatus(folder, user, db, h.userCache)
+		}
+
+		var folderCopy model.Folder
+		copier.Copy(&folderCopy, &folder)
+
+		folderCopy.IsSubscribed = h.userCache.GetFolderSubscriptionStatus(&folderCopy, user)
+
+		return http.StatusOK, folderCopy, ""
+
+	})
+}
