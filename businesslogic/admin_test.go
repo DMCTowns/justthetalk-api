@@ -16,7 +16,11 @@
 package businesslogic
 
 import (
+	"justthetalk/connections"
 	"testing"
+	"time"
+
+	"gorm.io/gorm"
 )
 
 func TestFetchBlockedUsers(t *testing.T) {
@@ -98,4 +102,18 @@ func TestAdminMoveDiscussion(t *testing.T) {
 
 func TestAdminEraseDiscussion(t *testing.T) {
 	t.Fail()
+}
+
+func TestModerationQueue(t *testing.T) {
+	// TODO - clear queue, create reports
+	connections.WithDatabase(60*time.Second, func(db *gorm.DB) {
+
+		folderCache := NewFolderCache()
+		discussionCache := NewDiscussionCache(folderCache)
+
+		posts := GetModerationQueue(folderCache, discussionCache, db)
+		if len(posts) == 0 {
+			t.Error("No posts")
+		}
+	})
 }

@@ -1704,7 +1704,17 @@ DELIMITER //
 CREATE PROCEDURE create_report(IN $post_id bigint, IN $user_id bigint, IN $name varchar(64), IN $email varchar(64), IN $body varchar(512), IN $ipaddress varchar(15))
 BEGIN
 
+    declare $current_timestamp datetime;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
     start transaction;
+
+    select UTC_TIMESTAMP() into $current_timestamp;
 
     INSERT INTO post_report (
     version,
@@ -1719,7 +1729,7 @@ BEGIN
     VALUES (
     1,
     $body,
-    UTC_TIMESTAMP(),
+    $current_timestamp,
     $email,
     $ipaddress,
     $name,
@@ -1731,11 +1741,64 @@ BEGIN
     set moderation_score = moderation_score + 1
     where id = $post_id;
 
+    insert into moderation_queue (
+    version,
+    created_date,
+    post_id)
+    select 1,
+    $current_timestamp,
+    id
+    from post p
+    where p.id = $post_id
+    and p.id not in (select post_id from moderation_queue);
+
     commit work;
 
 END //
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS get_moderation_queue;
+DELIMITER //
+CREATE PROCEDURE get_moderation_queue()
+BEGIN
+
+    select p.id,
+    p.version,
+    p.created_date,
+    p.discussion_id,
+    d.status discussion_status,
+    p.text,
+    p.user_id,
+    case p.deleted when 1 then 1 else 0 end deleted,
+    p.moderation_result,
+    p.moderation_score,
+    p.status,
+    p.last_edit_date,
+    case p.markdown when 1 then 1 else 0 end markdown,
+    p.post_count,
+    p.post_num,
+    u.id user_id,
+    u.username,
+    case u.enabled when 1 then 1 else 0 end user_enabled,
+    case u.account_locked when 1 then 1 else 0 end user_locked,
+    case u.account_expired when 1 then 1 else 0 end user_expired,
+    case coalesce(o.watch, 0) when 1 then 1 else 0 end user_watch,
+    case coalesce(o.premoderate) when 1 then 1 else 0 end user_premod
+    from post p
+    inner join discussion d
+    on p.discussion_id = d.id
+    inner join folder f
+    on d.folder_id = f.id
+    inner join user u
+    on p.user_id = u.id
+    left join user_options o
+    on u.id = o.user_id
+    inner join moderation_queue mq
+    on p.id = mq.post_id
+    order by p.created_date;
+
+END //
+DELIMITER ;
 
 DROP PROCEDURE IF EXISTS get_reports_by_discussion;
 DELIMITER //

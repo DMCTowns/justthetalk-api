@@ -185,7 +185,12 @@ func GetPosts(folder *model.Folder, discussion *model.Discussion, user *model.Us
 	}
 
 	for _, post := range posts {
+
 		post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
+
+		slugText := slug.Make(discussion.Title)
+		post.Url = fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
+
 		if user == nil || !user.IsAdmin {
 			if post.Status == model.PostStatusPostedByAdmin {
 				post.CreatedByUserId = 1
@@ -194,8 +199,6 @@ func GetPosts(folder *model.Folder, discussion *model.Discussion, user *model.Us
 				post.CreatedByUserId = 0
 				post.CreatedByUsername = ""
 				post.Text = ""
-				slugText := slug.Make(discussion.Title)
-				post.Url = fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
 			}
 		}
 	}

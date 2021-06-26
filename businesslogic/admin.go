@@ -19,6 +19,9 @@ import (
 	"justthetalk/model"
 	"justthetalk/utils"
 
+	"fmt"
+
+	"github.com/gosimple/slug"
 	"gorm.io/gorm"
 )
 
@@ -85,7 +88,39 @@ func AdminDeleteNoUndeletePost(postId uint, discussion *model.Discussion, delete
 
 }
 
-func GetReports(discussion *model.Discussion, db *gorm.DB) []*model.PostReport {
+func GetModerationQueue(folderCache *FolderCache, discussionCache *DiscussionCache, db *gorm.DB) []*model.Post {
+
+	results := make([]*model.Post, 0)
+
+	if result := db.Raw("call get_moderation_queue()").Find(&results); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	// ugh!
+	for _, post := range results {
+
+		if !(post.Status == model.PostStatusSuspendedByAdmin || post.Status == model.PostStatusWatch) {
+			post.UserReports = make([]*model.PostReport, 0)
+			db.Table("post_report").Where("post_id = ?", post.Id).Find(&post.UserReports)
+		}
+
+		post.ModeratorComments = make([]*model.ModeratorComment, 0)
+		db.Table("moderator_comment").Where("post_id = ?", post.Id).Find(&post.ModeratorComments)
+
+		discussion := discussionCache.UnsafeGet(post.DiscussionId)
+		folder := folderCache.UnsafeGet(discussion.FolderId)
+
+		post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
+		slugText := slug.Make(discussion.Title)
+		post.Url = fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
+
+	}
+
+	return results
+
+}
+
+func GetDiscussionReports(discussion *model.Discussion, db *gorm.DB) []*model.PostReport {
 
 	results := make([]*model.PostReport, 0)
 	if result := db.Raw("call get_reports_by_discussion(?)", discussion.Id).Scan(&results); result.Error != nil {

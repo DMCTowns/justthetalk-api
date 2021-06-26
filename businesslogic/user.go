@@ -561,11 +561,11 @@ func DeleteDiscussionBookmark(user *model.User, discussion *model.Discussion, us
 
 func CreateReport(reportData *model.PostReport, db *gorm.DB) {
 
-	if result := db.Exec("call create_report(?, ?, ?, ?, ?, ?)", reportData.PostId, reportData.UserId, reportData.Name, reportData.Email, reportData.Body, reportData.IPAddress); result.Error != nil {
+	if result := db.Exec("call create_report(?, ?, ?, ?, ?, ?)", reportData.PostId, reportData.ReporterUserId, reportData.ReporterName, reportData.ReporterEmail, reportData.Body, reportData.IPAddress); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	SendEmail(reportData.Email, reportData, ReportSubmittedTemplate)
+	SendEmail(reportData.ReporterEmail, reportData, ReportSubmittedTemplate)
 
 }
 

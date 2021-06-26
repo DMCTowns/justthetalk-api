@@ -51,6 +51,9 @@ type Post struct {
 	PostAsAdmin           bool      `json:"postAsAdmin,omitempty" gorm:"-"`
 	SubscribeToDiscussion bool      `json:"subscribeToDiscussion,omitempty" gorm:"-"`
 	Url                   string    `json:"url" gorm:"_"`
+
+	UserReports       []*PostReport       `json:"userReports"`
+	ModeratorComments []*ModeratorComment `json:"moderatorComments"`
 }
 
 type IndexablePost struct {
@@ -64,21 +67,13 @@ type IndexablePost struct {
 }
 type PostReport struct {
 	ModelBase
-	Name              string    `json:"name" gorm:"column:name"`
-	Email             string    `json:"email" gorm:"column:email"`
-	Body              string    `json:"body" gorm:"column:comment"`
-	IPAddress         string    `json:"ipaddress" gorm:"column:ipaddress"`
-	DiscussionId      uint      `json:"discussionId" gorm:"column:discussion_id"`
-	PostId            uint      `json:"postId" gorm:"column:post_id"`
-	PostStatus        uint      `json:"postStatus" gorm:"column:post_status"`
-	PostNum           int       `json:"postNum" gorm:"column:post_num"`
-	CreatedByUserId   uint      `json:"createdByUserId" gorm:"column:user_id"`
-	CreatedByUsername string    `json:"createdByUsername" gorm:"column:username"`
-	PostCreatedDate   time.Time `json:"postCreatedDate" gorm:"column:post_created_date"`
-	ModerationScore   float64   `json:"moderationScore" gorm:"column:moderation_score"`
-	ModerationResult  int       `json:"moderationResult" gorm:"column:moderation_result"`
-	UserId            uint      `json:"userId" gorm:"column:user_id"`
-	Score             float64   `json:"score" gorm:"column:score"`
+	PostId         uint    `json:"postId" gorm:"column:post_id"`
+	ReporterUserId uint    `json:"userId" gorm:"column:user_id"`
+	ReporterName   string  `json:"name" gorm:"column:name"`
+	ReporterEmail  string  `json:"email" gorm:"column:email"`
+	Body           string  `json:"body" gorm:"column:comment"`
+	IPAddress      string  `json:"ipaddress" gorm:"column:ipaddress"`
+	Score          float64 `json:"score" gorm:"column:score"`
 }
 
 type ModeratorComment struct {
@@ -88,4 +83,11 @@ type ModeratorComment struct {
 	PostId uint   `json:"postId" gorm:"column:post_id"`
 	UserId uint   `json:"userId" gorm:"column:user_id"`
 	Vote   int    `json:"vote" gorm:"column:result"`
+}
+
+type ModeratedPostRecord struct {
+	Post           Post
+	Report         PostReport
+	Comment        ModeratorComment
+	FrontPageEntry FrontPageEntry
 }

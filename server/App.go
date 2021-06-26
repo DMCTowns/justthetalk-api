@@ -181,7 +181,10 @@ func (a *App) configureAdminRouter(router *mux.Router) {
 	adminHandler := handlers.NewAdminHandler(a.userCache, a.folderCache, a.discussionCache, a.postProcessor)
 
 	adminRouter := router.PathPrefix("/admin").Subrouter().StrictSlash(false)
-	adminRouter.HandleFunc("/discussion/{discussionId}/report", adminHandler.GetReports).Methods(http.MethodGet, http.MethodOptions)
+
+	adminRouter.HandleFunc("/moderation/queue", adminHandler.GetModerationQueue).Methods(http.MethodGet, http.MethodOptions)
+
+	adminRouter.HandleFunc("/discussion/{discussionId}/report", adminHandler.GetDiscussionReports).Methods(http.MethodGet, http.MethodOptions)
 	adminRouter.HandleFunc("/discussion/{discussionId}/comment", adminHandler.GetComments).Methods(http.MethodGet, http.MethodOptions)
 	adminRouter.HandleFunc("/discussion/{discussionId}/post/{postId}/report", adminHandler.CreateComment).Methods(http.MethodPost, http.MethodOptions)
 	adminRouter.HandleFunc("/discussion/{discussionId}/post/{postId}/delete", adminHandler.DeletePost).Methods(http.MethodPost, http.MethodOptions)

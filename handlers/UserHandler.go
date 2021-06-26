@@ -309,10 +309,10 @@ func (h *UserHandler) CreateReport(res http.ResponseWriter, req *http.Request) {
 		}
 
 		if user != nil {
-			reportData.UserId = user.Id
+			reportData.ReporterUserId = user.Id
 		}
 
-		if len(reportData.Name) == 0 || len(reportData.Email) == 0 || len(reportData.Body) == 0 {
+		if len(reportData.ReporterName) == 0 || len(reportData.ReporterEmail) == 0 || len(reportData.Body) == 0 {
 			panic(utils.ErrBadRequest)
 		}
 

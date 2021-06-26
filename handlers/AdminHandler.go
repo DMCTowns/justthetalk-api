@@ -46,17 +46,23 @@ func NewAdminHandler(userCache *businesslogic.UserCache, folderCache *businesslo
 
 }
 
-func (h *AdminHandler) GetReports(res http.ResponseWriter, req *http.Request) {
+func (h *AdminHandler) GetModerationQueue(res http.ResponseWriter, req *http.Request) {
 	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
-		if user == nil || !user.IsAdmin {
-			panic(utils.ErrForbidden)
-		}
+		results := businesslogic.GetModerationQueue(h.folderCache, h.discussionCache, db)
+
+		return http.StatusOK, results, ""
+
+	})
+}
+
+func (h *AdminHandler) GetDiscussionReports(res http.ResponseWriter, req *http.Request) {
+	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
 		discussionId := utils.ExtractVarInt("discussionId", req)
 		discussion := h.discussionCache.Get(discussionId, user)
 
-		results := businesslogic.GetReports(discussion, db)
+		results := businesslogic.GetDiscussionReports(discussion, db)
 
 		return http.StatusOK, results, ""
 
