@@ -19,13 +19,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"justthetalk/connections"
 	"justthetalk/model"
 	"justthetalk/utils"
 	"time"
 
-	"github.com/gosimple/slug"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -119,8 +117,7 @@ func SearchPosts(queryString string, size int, page int, user *model.User, ipAdd
 		if post.Status == 0 {
 			discussion := discussionCache.Get(post.DiscussionId, user)
 			folder := folderCache.Get(discussion.FolderId, user)
-			slugText := slug.Make(discussion.Title)
-			post.Url = fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
+			post.Url = utils.UrlForPost(folder, discussion, &post)
 			post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
 			result := &model.SearchResult{
 				Post:         &post,

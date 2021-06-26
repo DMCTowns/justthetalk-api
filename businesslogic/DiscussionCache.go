@@ -17,7 +17,6 @@ package businesslogic
 
 import (
 	"errors"
-	"fmt"
 	"justthetalk/connections"
 	"justthetalk/model"
 	"justthetalk/utils"
@@ -28,7 +27,6 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/gosimple/slug"
 	"gorm.io/gorm"
 
 	log "github.com/sirupsen/logrus"
@@ -88,8 +86,7 @@ func (cache *DiscussionCache) UnsafeGet(discussionId uint) *model.Discussion {
 		})
 
 		folder := cache.folderCache.UnsafeGet(discussion.FolderId)
-		slugText := slug.Make(discussion.Title)
-		discussion.Url = fmt.Sprintf("/%s/%d/%s", folder.Key, discussion.Id, slugText)
+		discussion.Url = utils.UrlForDiscussion(folder, &discussion)
 		discussion.HeaderMarkup = cache.postFormatter.ApplyPostFormatting(discussion.Header, &discussion)
 
 		cache.Put(&discussion)

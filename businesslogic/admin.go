@@ -19,9 +19,6 @@ import (
 	"justthetalk/model"
 	"justthetalk/utils"
 
-	"fmt"
-
-	"github.com/gosimple/slug"
 	"gorm.io/gorm"
 )
 
@@ -111,8 +108,7 @@ func GetModerationQueue(folderCache *FolderCache, discussionCache *DiscussionCac
 		folder := folderCache.UnsafeGet(discussion.FolderId)
 
 		post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
-		slugText := slug.Make(discussion.Title)
-		post.Url = fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
+		post.Url = utils.UrlForPost(folder, discussion, post)
 
 	}
 

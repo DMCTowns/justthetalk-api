@@ -14,3 +14,25 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package utils
+
+import (
+	"fmt"
+	"justthetalk/model"
+
+	"github.com/gosimple/slug"
+)
+
+func UrlForFrontPageEntry(entry *model.FrontPageEntry) string {
+	slugText := slug.Make(entry.DiscussionTitle)
+	return fmt.Sprintf("/%s/%d/%s", entry.FolderKey, entry.DiscussionId, slugText)
+}
+
+func UrlForDiscussion(folder *model.Folder, discussion *model.Discussion) string {
+	slugText := slug.Make(discussion.Title)
+	return fmt.Sprintf("/%s/%d/%s", folder.Key, discussion.Id, slugText)
+}
+
+func UrlForPost(folder *model.Folder, discussion *model.Discussion, post *model.Post) string {
+	slugText := slug.Make(discussion.Title)
+	return fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
+}

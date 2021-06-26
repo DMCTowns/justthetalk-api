@@ -594,10 +594,16 @@ func GetIgnoredUsers(user *model.User, db *gorm.DB) []*model.IgnoredUser {
 
 }
 
-func CheckSubscriptions(user *model.User, db *gorm.DB) []*model.SubscriptionUpdate {
+func CheckSubscriptions(user *model.User, db *gorm.DB) []*model.FrontPageEntry {
 
-	var subscriptions []*model.SubscriptionUpdate
-	if result := db.Raw("call check_subscriptions(?)", user.Id).Scan(&subscriptions); result.Error != nil {
+	var subscriptions []*model.FrontPageEntry
+
+	isAdmin := 0
+	if user.IsAdmin {
+		isAdmin = 1
+	}
+
+	if result := db.Raw("call get_frontpage_subscriptions(?, ?, ?, ?)", user.Id, isAdmin, 0, 1).Scan(&subscriptions); result.Error != nil {
 		if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 		}

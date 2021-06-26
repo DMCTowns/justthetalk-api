@@ -360,8 +360,8 @@ func (h *UserHandler) CheckSubscriptions(res http.ResponseWriter, req *http.Requ
 
 		subscriptions := businesslogic.CheckSubscriptions(user, db)
 		if len(subscriptions) > 0 {
-			discussion := h.discussionCache.Get(subscriptions[0].DiscussionId, user)
-			return http.StatusOK, discussion.Url, ""
+			url := utils.UrlForFrontPageEntry(subscriptions[0])
+			return http.StatusOK, url, ""
 		} else {
 			return http.StatusNoContent, nil, "Subscriptions up to date"
 		}

@@ -20,11 +20,9 @@ import (
 	"justthetalk/utils"
 
 	"errors"
-	"fmt"
 	"html"
 	"sync"
 
-	"github.com/gosimple/slug"
 	"gorm.io/gorm"
 )
 
@@ -61,8 +59,7 @@ func GetDiscussions(folder *model.Folder, pageStart int, pageSize int, user *mod
 	}
 
 	for _, entry := range discussions {
-		slugText := slug.Make(entry.DiscussionTitle)
-		entry.Url = fmt.Sprintf("/%s/%d/%s", folder.Key, entry.DiscussionId, slugText)
+		entry.Url = utils.UrlForFrontPageEntry(entry)
 	}
 
 	return discussions
@@ -115,8 +112,7 @@ func CreateDiscussion(folder *model.Folder, discussion *model.Discussion, user *
 
 	created.HeaderMarkup = PostFormatter().ApplyPostFormatting(created.Header, &created)
 
-	slugText := slug.Make(created.Title)
-	created.Url = fmt.Sprintf("/%s/%d/%s", folder.Key, created.Id, slugText)
+	created.Url = utils.UrlForDiscussion(folder, &created)
 
 	if discussion.IsSubscribed {
 		SetDiscussionSubscriptionStatus(&created, user, db, userCache)
@@ -148,8 +144,7 @@ func EditDiscussion(folder *model.Folder, discussion *model.Discussion, user *mo
 
 	edited.HeaderMarkup = PostFormatter().ApplyPostFormatting(edited.Header, &edited)
 
-	slugText := slug.Make(edited.Title)
-	edited.Url = fmt.Sprintf("/%s/%d/%s", folder.Key, edited.Id, slugText)
+	edited.Url = utils.UrlForDiscussion(folder, discussion)
 
 	discussionCache.Put(&edited)
 
@@ -187,9 +182,7 @@ func GetPosts(folder *model.Folder, discussion *model.Discussion, user *model.Us
 	for _, post := range posts {
 
 		post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
-
-		slugText := slug.Make(discussion.Title)
-		post.Url = fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
+		post.Url = utils.UrlForPost(folder, discussion, post)
 
 		if user == nil || !user.IsAdmin {
 			if post.Status == model.PostStatusPostedByAdmin {
@@ -248,8 +241,7 @@ func CreatePost(folder *model.Folder, discussion *model.Discussion, user *model.
 	discussionCache.Put(discussion)
 
 	created.Markup = PostFormatter().ApplyPostFormatting(created.Text, discussion)
-	slugText := slug.Make(discussion.Title)
-	created.Url = fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
+	created.Url = utils.UrlForPost(folder, discussion, &created)
 
 	if post.SubscribeToDiscussion {
 		SetDiscussionSubscriptionStatus(discussion, user, db, userCache)
@@ -276,8 +268,7 @@ func EditPost(folder *model.Folder, discussion *model.Discussion, user *model.Us
 	}
 
 	post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
-	slugText := slug.Make(discussion.Title)
-	post.Url = fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
+	post.Url = utils.UrlForPost(folder, discussion, &post)
 
 	return &post
 
@@ -309,8 +300,7 @@ func DeletePost(folder *model.Folder, discussion *model.Discussion, user *model.
 		post.Markup = ""
 	}
 
-	slugText := slug.Make(discussion.Title)
-	post.Url = fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
+	post.Url = utils.UrlForPost(folder, discussion, &post)
 
 	return &post
 
