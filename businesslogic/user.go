@@ -77,6 +77,35 @@ func ValidateUserLogin(credentials model.LoginCredentials, ipAddress string, db 
 
 }
 
+func DeleteFolderSubscriptions(subsList []int, user *model.User, db *gorm.DB, userCache *UserCache) []*model.UserFolderSubscription {
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+
+		var err error
+		for _, subsId := range subsList {
+			err = tx.Exec("call delete_folder_subscription(?, ?)", user.Id, subsId).Error
+			if err != nil {
+				break
+			}
+		}
+		return err
+	})
+
+	if err != nil {
+		utils.PanicWithWrapper(err, utils.ErrInternalError)
+	}
+
+	var entries []*model.UserFolderSubscription
+	if result := db.Raw("call get_folder_subscriptions(?)", user.Id).Scan(&entries); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	userCache.FlushSidebandData(user.Id)
+
+	return entries
+
+}
+
 func DeleteDiscussionSubscriptions(subsList []int, user *model.User, db *gorm.DB, userCache *UserCache) []*model.FrontPageEntry {
 
 	err := db.Transaction(func(tx *gorm.DB) error {

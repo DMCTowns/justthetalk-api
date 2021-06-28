@@ -26,6 +26,7 @@ const HeaderAccessControlAllowMethods = "Access-Control-Allow-Methods"
 const HeaderVary = "Vary"
 
 const HeaderContentType = "Content-Type"
+const HeaderCacheControl = "Cache-Control"
 const HeaderAuthorization = "Authorization"
 const Bearer = "Bearer"
 

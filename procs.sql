@@ -2072,6 +2072,18 @@ BEGIN
 END //
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS delete_folder_subscription;
+DELIMITER //
+CREATE PROCEDURE delete_folder_subscription(IN $user_id bigint, IN $subscription_id bigint)
+BEGIN
+
+    delete from folder_subscription s
+    where s.id = $subscription_id
+    and s.user_id = $user_id;
+
+END //
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS get_folder_subscription_exceptions;
 DELIMITER //
 CREATE PROCEDURE get_folder_subscription_exceptions(IN $user_id bigint)

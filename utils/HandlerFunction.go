@@ -122,6 +122,9 @@ func HandlerFunction(res http.ResponseWriter, req *http.Request, targetFunc Hand
 	user, _ = req.Context().Value(ContextUserKey).(*model.User)
 
 	statusCode, responseData, message := targetFunc(res, req, user, db)
+
+	res.Header().Set(HeaderCacheControl, "no-store")
+
 	SendRespsonse(statusCode, responseData, message, res)
 
 }

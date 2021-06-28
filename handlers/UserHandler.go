@@ -403,6 +403,21 @@ func (h *UserHandler) UpdateFolderSubscriptions(res http.ResponseWriter, req *ht
 	})
 }
 
+func (h *UserHandler) DeleteFolderSubscriptions(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		var subsList []int
+		if err := json.NewDecoder(req.Body).Decode(&subsList); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+
+		result := businesslogic.DeleteFolderSubscriptions(subsList, user, db, h.userCache)
+
+		return http.StatusOK, result, ""
+
+	})
+}
+
 func (h *UserHandler) DeleteDiscussionSubscriptions(res http.ResponseWriter, req *http.Request) {
 	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
