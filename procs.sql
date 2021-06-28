@@ -2302,7 +2302,8 @@ BEGIN
             on fs.folder_id = d.folder_id
             where fs.id = $subscription_id
             and fs.user_id = $user_id
-            and d.last_post > fs.last_read;
+            and d.last_post > fs.last_read
+            and d.post_count > 0;
 
 
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
