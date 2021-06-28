@@ -695,6 +695,13 @@ func CheckSubscriptions(user *model.User, db *gorm.DB) []*model.FrontPageEntry {
 		}
 	}
 
-	return subscriptions
+	unreadSubs := make([]*model.FrontPageEntry, 0)
+	for _, s := range subscriptions {
+		if s.PostCount-s.LastPostReadCount > 0 {
+			unreadSubs = append(unreadSubs, s)
+		}
+	}
+
+	return unreadSubs
 
 }

@@ -27,7 +27,7 @@ type FrontPageEntry struct {
 	FolderTitle       string    `json:"folderTitle" gorm:"column:folder_name"`
 	LastPostId        uint      `json:"lastPostId" gorm:"column:last_post_id"`
 	LastPostDate      time.Time `json:"lastPostDate" gorm:"column:last_post"`
-	PostCount         uint      `json:"postCount" gorm:"column:post_count"`
+	PostCount         int64     `json:"postCount" gorm:"column:post_count"`
 	IsAdmin           *bool     `json:"-" gorm:"column:admin_only"`
 	LastPostReadCount int64     `json:"lastPostReadCount" gorm:"last_post_read_count"`
 	LastPostReadDate  time.Time `json:"lastPostReadDate" gorm:"last_post_read_date"`
