@@ -389,6 +389,35 @@ func (h *UserHandler) GetFolderSubscriptionExceptions(res http.ResponseWriter, r
 		return http.StatusOK, exceptions, ""
 	})
 }
+
+func (h *UserHandler) MarkFolderSubscriptionsRead(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		var subsList []uint
+		if err := json.NewDecoder(req.Body).Decode(&subsList); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+
+		subscriptons := businesslogic.MarkFolderSubscriptionsRead(subsList, user, db, h.userCache)
+		return http.StatusOK, subscriptons, ""
+
+	})
+}
+
+func (h *UserHandler) MarkDiscussionSubscriptionsRead(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		var subsList []uint
+		if err := json.NewDecoder(req.Body).Decode(&subsList); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+
+		subscriptons := businesslogic.MarkDiscussionSubscriptionsRead(subsList, user, db, h.userCache)
+		return http.StatusOK, subscriptons, ""
+
+	})
+}
+
 func (h *UserHandler) UpdateFolderSubscriptions(res http.ResponseWriter, req *http.Request) {
 	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
@@ -406,7 +435,7 @@ func (h *UserHandler) UpdateFolderSubscriptions(res http.ResponseWriter, req *ht
 func (h *UserHandler) DeleteFolderSubscriptions(res http.ResponseWriter, req *http.Request) {
 	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
-		var subsList []int
+		var subsList []uint
 		if err := json.NewDecoder(req.Body).Decode(&subsList); err != nil {
 			utils.PanicWithWrapper(err, utils.ErrBadRequest)
 		}
@@ -421,7 +450,7 @@ func (h *UserHandler) DeleteFolderSubscriptions(res http.ResponseWriter, req *ht
 func (h *UserHandler) DeleteDiscussionSubscriptions(res http.ResponseWriter, req *http.Request) {
 	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
-		var subsList []int
+		var subsList []uint
 		if err := json.NewDecoder(req.Body).Decode(&subsList); err != nil {
 			utils.PanicWithWrapper(err, utils.ErrBadRequest)
 		}

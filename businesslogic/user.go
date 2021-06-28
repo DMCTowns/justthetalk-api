@@ -77,7 +77,64 @@ func ValidateUserLogin(credentials model.LoginCredentials, ipAddress string, db 
 
 }
 
-func DeleteFolderSubscriptions(subsList []int, user *model.User, db *gorm.DB, userCache *UserCache) []*model.UserFolderSubscription {
+func MarkFolderSubscriptionsRead(subsList []uint, user *model.User, db *gorm.DB, userCache *UserCache) []*model.UserFolderSubscription {
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+
+		var err error
+		for _, subsId := range subsList {
+			err = tx.Exec("call mark_folder_subscription_read(?, ?)", user.Id, subsId).Error
+			if err != nil {
+				break
+			}
+		}
+		return err
+	})
+
+	if err != nil {
+		utils.PanicWithWrapper(err, utils.ErrInternalError)
+	}
+
+	var entries []*model.UserFolderSubscription
+	if result := db.Raw("call get_folder_subscriptions(?)", user.Id).Scan(&entries); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	userCache.FlushSidebandData(user.Id)
+
+	return entries
+
+}
+
+func MarkDiscussionSubscriptionsRead(subsList []uint, user *model.User, db *gorm.DB, userCache *UserCache) []*model.FrontPageEntry {
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var err error
+		for _, subsId := range subsList {
+			err = tx.Exec("call mark_discussion_read(?, ?)", user.Id, subsId).Error
+			if err != nil {
+				break
+			}
+		}
+		return err
+	})
+
+	if err != nil {
+		utils.PanicWithWrapper(err, utils.ErrInternalError)
+	}
+
+	var entries []*model.FrontPageEntry
+	if result := db.Raw("call get_discussion_subscriptions(?)", user.Id).Scan(&entries); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	userCache.FlushSidebandData(user.Id)
+
+	return entries
+
+}
+
+func DeleteFolderSubscriptions(subsList []uint, user *model.User, db *gorm.DB, userCache *UserCache) []*model.UserFolderSubscription {
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 
@@ -106,7 +163,7 @@ func DeleteFolderSubscriptions(subsList []int, user *model.User, db *gorm.DB, us
 
 }
 
-func DeleteDiscussionSubscriptions(subsList []int, user *model.User, db *gorm.DB, userCache *UserCache) []*model.FrontPageEntry {
+func DeleteDiscussionSubscriptions(subsList []uint, user *model.User, db *gorm.DB, userCache *UserCache) []*model.FrontPageEntry {
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		var err error

@@ -2252,3 +2252,90 @@ BEGIN
 
 END //
 DELIMITER ;
+
+
+
+
+DROP PROCEDURE IF EXISTS mark_discussion_read;
+DELIMITER //
+CREATE PROCEDURE mark_discussion_read(IN $user_id bigint, IN $discussion_id bigint)
+BEGIN
+
+    declare $last_post_id bigint;
+    declare $last_post_count bigint;
+    declare $last_post_date datetime;
+
+    select last_post_id,
+    post_count,
+    last_post
+    into $last_post_id,
+    $last_post_count,
+    $last_post_date
+    from discussion
+    where id = $discussion_id;
+
+    call update_user_bookmark($user_id, $discussion_id, $last_post_id, $last_post_count, $last_post_date);
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS mark_folder_subscription_read;
+DELIMITER //
+CREATE PROCEDURE mark_folder_subscription_read(IN $user_id bigint, IN $subscription_id bigint)
+BEGIN
+
+    declare quit int default 0;
+
+    declare $discussion_id bigint;
+    declare $last_post_id bigint;
+    declare $last_post_count bigint;
+    declare $last_post_date datetime;
+
+    declare curs
+        cursor for
+            select d.id,
+            d.last_post_id,
+            d.post_count,
+            d.last_post
+            from folder_subscription fs
+            inner join discussion d
+            on fs.folder_id = d.folder_id
+            where fs.id = $subscription_id
+            and fs.user_id = $user_id
+            and d.last_post > fs.last_read;
+
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+	declare continue handler for not found set quit = 1;
+
+    open curs;
+
+    start transaction;
+
+    curs_loop: loop
+
+        fetch curs into $discussion_id, $last_post_id, $last_post_count, $last_post_date;
+        if quit > 0 then
+            leave curs_loop;
+        end if;
+
+        call update_user_bookmark($user_id, $discussion_id, $last_post_id, $last_post_count, $last_post_date);
+
+    end loop curs_loop;
+
+    update folder_subscription fs
+    set fs.last_read = UTC_TIMESTAMP()
+    where fs.id = $subscription_id
+    and fs.user_id = $user_id;
+
+    commit work;
+
+END //
+DELIMITER ;
+
+

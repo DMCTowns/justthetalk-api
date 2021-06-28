@@ -174,6 +174,8 @@ func (a *App) configureUserRouter(router *mux.Router) {
 	userRouter.HandleFunc("/subscriptions/folder", userHandler.DeleteFolderSubscriptions).Methods(http.MethodDelete, http.MethodOptions)
 	userRouter.HandleFunc("/subscriptions/folder/exceptions", userHandler.GetFolderSubscriptionExceptions).Methods(http.MethodGet, http.MethodOptions)
 	userRouter.HandleFunc("/subscriptions/fetchorder", userHandler.UpdateSubscriptionFetchOrder).Methods(http.MethodPut, http.MethodOptions)
+	userRouter.HandleFunc("/subscriptions/folder/read", userHandler.MarkFolderSubscriptionsRead).Methods(http.MethodPost, http.MethodOptions)
+	userRouter.HandleFunc("/subscriptions/discussion/read", userHandler.MarkDiscussionSubscriptionsRead).Methods(http.MethodPost, http.MethodOptions)
 
 }
 
