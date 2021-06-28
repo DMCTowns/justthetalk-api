@@ -2077,9 +2077,20 @@ DELIMITER //
 CREATE PROCEDURE delete_folder_subscription(IN $user_id bigint, IN $subscription_id bigint)
 BEGIN
 
+    start transaction;
+
+    delete folder_subscription_exception
+    from folder_subscription_exception
+    inner join folder_subscription s
+    on folder_subscription_exception.subscription_id = s.id
+    where s.id = $subscription_id
+    and s.user_id = $user_id;
+
     delete from folder_subscription s
     where s.id = $subscription_id
     and s.user_id = $user_id;
+
+    commit work;
 
 END //
 DELIMITER ;
