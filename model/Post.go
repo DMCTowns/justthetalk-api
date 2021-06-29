@@ -43,14 +43,14 @@ type Post struct {
 	Status                int       `json:"status" gorm:"column:status"`
 	Text                  string    `json:"text" gorm:"column:text"`
 	Markdown              bool      `json:"markdown" gorm:"column:markdown"`
-	Markup                string    `json:"markup" gorm:"_"`
+	Markup                string    `json:"markup" gorm:"-"`
 	LastEditDate          time.Time `json:"lastEditDate" gorm:"column:last_edit_date"`
 	PostNum               int64     `json:"postNum" gorm:"column:post_num"`
 	ModerationScore       float64   `json:"moderationScore" gorm:"column:moderation_score"`
 	ModerationResult      int       `json:"moderationResult" gorm:"column:moderation_result"`
 	PostAsAdmin           bool      `json:"postAsAdmin,omitempty" gorm:"-"`
 	SubscribeToDiscussion bool      `json:"subscribeToDiscussion,omitempty" gorm:"-"`
-	Url                   string    `json:"url" gorm:"_"`
+	Url                   string    `json:"url" gorm:"-"`
 
 	UserReports       []*PostReport       `json:"userReports"`
 	ModeratorComments []*ModeratorComment `json:"moderatorComments"`

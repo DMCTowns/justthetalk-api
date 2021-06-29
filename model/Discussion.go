@@ -38,8 +38,9 @@ type Discussion struct {
 	ModelBase
 	FolderId          uint      `json:"folderId" gorm:"column:folder_id"`
 	Title             string    `json:"title" gorm:"column:title"`
+	TitleMarkup       string    `json:"titleMarkup" gorm:"-"`
 	Header            string    `json:"header" gorm:"header"`
-	HeaderMarkup      string    `json:"headerMarkup" gorm:"_"`
+	HeaderMarkup      string    `json:"headerMarkup" gorm:"-"`
 	LastPostId        uint      `json:"lastPostId" gorm:"column:last_post_id"`
 	LastPostDate      time.Time `json:"lastPostDate" gorm:"column:last_post"`
 	CreatedByUserId   uint      `json:"createdByUserId" gorm:"column:user_id"`
@@ -52,7 +53,7 @@ type Discussion struct {
 	IsLocked          bool      `json:"isLocked" gorm:"column:locked"`
 
 	//BlockedUsers      map[uint]bool `json:"blockedUsers" gorm:"-"`
-	Url          string `json:"url" gorm:"_"`
+	Url          string `json:"url" gorm:"-"`
 	IsBlocked    bool   `json:"isBlocked" gorm:"-"`
 	IsSubscribed bool   `json:"isSubscribed" gorm:"-"`
 }
