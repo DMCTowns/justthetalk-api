@@ -28,6 +28,9 @@ const HeaderVary = "Vary"
 const HeaderContentType = "Content-Type"
 const HeaderCacheControl = "Cache-Control"
 const HeaderAuthorization = "Authorization"
+const HeaderConnection = "Connection"
+const HeaderKeepAlive = "Keep-Alive"
+
 const Bearer = "Bearer"
 
 const ContentTypeJson = "application/json; charset=utf-8"

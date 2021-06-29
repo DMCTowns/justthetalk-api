@@ -124,6 +124,8 @@ func HandlerFunction(res http.ResponseWriter, req *http.Request, targetFunc Hand
 	statusCode, responseData, message := targetFunc(res, req, user, db)
 
 	res.Header().Set(HeaderCacheControl, "no-store")
+	res.Header().Set(HeaderConnection, "Keep-Alive")
+	res.Header().Set(HeaderKeepAlive, "timeout=60")
 
 	SendRespsonse(statusCode, responseData, message, res)
 
