@@ -85,7 +85,7 @@ func validateDiscussion(folder *model.Folder, discussion *model.Discussion, db *
 		}
 	}
 
-	if duplicateDiscussion.Id != 0 {
+	if duplicateDiscussion.Id != 0 && duplicateDiscussion.Id != discussion.Id {
 		utils.PanicWithWrapper(errors.New("A discussion with that title already exists"), utils.ErrBadRequest)
 	}
 
