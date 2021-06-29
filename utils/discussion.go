@@ -36,3 +36,14 @@ func UrlForPost(folder *model.Folder, discussion *model.Discussion, post *model.
 	slugText := slug.Make(discussion.Title)
 	return fmt.Sprintf("/%s/%d/%s/%d", folder.Key, discussion.Id, slugText, post.PostNum)
 }
+
+func FormatFrontPageEntry(entry *model.FrontPageEntry) {
+	//entry.DiscussionTitle = html.EscapeString(entry.DiscussionTitle)
+	entry.Url = UrlForFrontPageEntry(entry)
+}
+
+func FormatFrontPageEntries(entries []*model.FrontPageEntry) {
+	for _, entry := range entries {
+		FormatFrontPageEntry(entry)
+	}
+}

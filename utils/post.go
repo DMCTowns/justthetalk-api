@@ -17,6 +17,7 @@ package utils
 
 import (
 	"fmt"
+	"html"
 	"justthetalk/model"
 	"regexp"
 	"strings"
@@ -95,7 +96,8 @@ func (p *PostFormatter) ApplyPostFormatting(rawText string, discussion *model.Di
 
 	markup := "<div>"
 
-	text := strings.TrimSpace(rawText)
+	text := html.EscapeString(rawText)
+	text = strings.TrimSpace(text)
 	text = p.formatLinks(text)
 	text = p.formatPostLinks(text, discussion)
 

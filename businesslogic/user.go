@@ -156,6 +156,8 @@ func MarkDiscussionSubscriptionsRead(subsList []uint, user *model.User, db *gorm
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
+	utils.FormatFrontPageEntries(entries)
+
 	return entries
 
 }
@@ -209,9 +211,7 @@ func DeleteDiscussionSubscriptions(subsList []uint, user *model.User, db *gorm.D
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	for _, sub := range subscriptions {
-		sub.Url = utils.UrlForFrontPageEntry(sub)
-	}
+	utils.FormatFrontPageEntries(subscriptions)
 
 	return subscriptions
 
@@ -274,9 +274,7 @@ func GetDiscussionSubscriptions(user *model.User, db *gorm.DB) []*model.FrontPag
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	for _, sub := range subscriptions {
-		sub.Url = utils.UrlForFrontPageEntry(sub)
-	}
+	utils.FormatFrontPageEntries(subscriptions)
 
 	return subscriptions
 }
@@ -664,6 +662,7 @@ func CheckSubscriptions(user *model.User, db *gorm.DB) []*model.FrontPageEntry {
 	unreadSubs := make([]*model.FrontPageEntry, 0)
 	for _, s := range subscriptions {
 		if s.PostCount-s.LastPostReadCount > 0 {
+			utils.FormatFrontPageEntry(s)
 			unreadSubs = append(unreadSubs, s)
 		}
 	}

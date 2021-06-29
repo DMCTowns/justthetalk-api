@@ -57,10 +57,7 @@ func GetFrontPage(user *model.User, viewType string, pageSize int, pageStart int
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	for _, d := range discussions {
-		discussion := discussionCache.Get(d.DiscussionId, user)
-		d.Url = discussion.Url
-	}
+	utils.FormatFrontPageEntries(discussions)
 
 	return discussions
 

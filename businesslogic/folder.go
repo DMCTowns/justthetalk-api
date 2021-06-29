@@ -16,11 +16,12 @@
 package businesslogic
 
 import (
+	"html"
 	"justthetalk/model"
 	"justthetalk/utils"
 
 	"errors"
-	"html"
+
 	"sync"
 
 	"gorm.io/gorm"
@@ -58,9 +59,7 @@ func GetDiscussions(folder *model.Folder, pageStart int, pageSize int, user *mod
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	for _, entry := range discussions {
-		entry.Url = utils.UrlForFrontPageEntry(entry)
-	}
+	utils.FormatFrontPageEntries(discussions)
 
 	return discussions
 
@@ -111,7 +110,6 @@ func CreateDiscussion(folder *model.Folder, discussion *model.Discussion, user *
 	}
 
 	created.HeaderMarkup = PostFormatter().ApplyPostFormatting(created.Header, &created)
-
 	created.Url = utils.UrlForDiscussion(folder, &created)
 
 	if discussion.IsSubscribed {
@@ -143,7 +141,6 @@ func EditDiscussion(folder *model.Folder, discussion *model.Discussion, user *mo
 	}
 
 	edited.HeaderMarkup = PostFormatter().ApplyPostFormatting(edited.Header, &edited)
-
 	edited.Url = utils.UrlForDiscussion(folder, discussion)
 
 	discussionCache.Put(&edited)
@@ -258,6 +255,8 @@ func EditPost(folder *model.Folder, discussion *model.Discussion, user *model.Us
 	if discussion.IsBlocked {
 		panic(utils.ErrForbidden)
 	}
+
+	update.Text = html.EscapeString(update.Text)
 
 	if result := db.Raw("call edit_discussion_post(?, ?, ?, ?, ?)", folder.Id, discussion.Id, update.Id, update.Text, user.Id).Scan(&post); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
