@@ -176,6 +176,7 @@ func (client *websocketClient) writeWorker() {
 		select {
 
 		case message, ok := <-client.writeQueue:
+
 			client.connection.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				client.connection.WriteMessage(websocket.CloseMessage, []byte{})
@@ -184,18 +185,20 @@ func (client *websocketClient) writeWorker() {
 
 			w, err := client.connection.NextWriter(websocket.TextMessage)
 			if err != nil {
-				return
+				log.Error(err)
+				break
 			}
 
 			w.Write([]byte(message))
 			if err := w.Close(); err != nil {
-				return
+				log.Error(err)
+				break
 			}
 
 		case <-client.ticker.C:
 			client.connection.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := client.connection.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
+				break
 			}
 
 		}
@@ -259,7 +262,6 @@ func (client *websocketClient) hello(accessToken string) {
 	subscription := client.handler.registerClient(client)
 
 	defer func() {
-		log.Infof("Exiting socket handler for: %d", client.user.Id)
 		subscription.Close()
 		client.close()
 	}()
