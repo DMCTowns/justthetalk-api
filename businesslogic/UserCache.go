@@ -85,6 +85,8 @@ func (cache *UserCache) getFromDB(userId uint, user *model.User) {
 			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 		}
 
+		cache.loadBookmarks(user, db)
+
 	})
 
 	user.IgnoredUsers = make(map[uint]*model.IgnoredUser)
@@ -152,187 +154,170 @@ func (cache *UserCache) GetUserIdForRefreshToken(refreshToken string) uint {
 	}
 }
 
-func (cache *UserCache) PutSidebandData(userData *model.UserSidebandData) {
+// func (cache *UserCache) PutSidebandData(userData *model.UserSidebandData) {
 
-	data, err := json.Marshal(userData)
-	if err != nil {
-		panic(err)
-	}
+// 	data, err := json.Marshal(userData)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	userKey := fmt.Sprintf("US%d", userData.UserId)
-	status := connections.RedisConnection().Set(context.Background(), userKey, string(data), time.Hour*24)
-	if status.Err() != nil {
-		panic(status.Err())
-	}
+// 	userKey := fmt.Sprintf("US%d", userData.UserId)
+// 	status := connections.RedisConnection().Set(context.Background(), userKey, string(data), time.Hour*24)
+// 	if status.Err() != nil {
+// 		panic(status.Err())
+// 	}
 
-}
+// }
 
-func (cache *UserCache) GetSidebandData(userId uint) *model.UserSidebandData {
+// func (cache *UserCache) GetSidebandData(userId uint) *model.UserSidebandData {
 
-	var userData model.UserSidebandData
+// 	var userData model.UserSidebandData
 
-	userKey := fmt.Sprintf("US%d", userId)
-	val, err := connections.RedisConnection().Get(context.Background(), userKey).Result()
-	if err != redis.Nil {
-		if err := json.Unmarshal([]byte(val), &userData); err != nil {
-			panic(utils.ErrInternalError)
-		}
-		connections.RedisConnection().Expire(context.Background(), userKey, time.Hour*24)
-	} else {
+// 	userKey := fmt.Sprintf("US%d", userId)
+// 	val, err := connections.RedisConnection().Get(context.Background(), userKey).Result()
+// 	if err != redis.Nil {
+// 		if err := json.Unmarshal([]byte(val), &userData); err != nil {
+// 			panic(utils.ErrInternalError)
+// 		}
+// 		connections.RedisConnection().Expire(context.Background(), userKey, time.Hour*24)
+// 	} else {
 
-		user := cache.Get(userId)
+// 		user := cache.Get(userId)
 
-		userData.UserId = user.Id
+// 		userData.UserId = user.Id
 
-		cache.populateDiscussionBookmarks(&userData)
-		cache.populateFolderSubscriptions(&userData)
-		cache.populateFolderSubscriptionExceptions(&userData)
-		cache.populateDiscussionSubscriptions(&userData)
+// 		cache.populateDiscussionBookmarks(&userData)
+// 		cache.populateFolderSubscriptions(&userData)
+// 		cache.populateFolderSubscriptionExceptions(&userData)
+// 		cache.populateDiscussionSubscriptions(&userData)
 
-		cache.PutSidebandData(&userData)
+// 		cache.PutSidebandData(&userData)
 
-	}
+// 	}
 
-	return &userData
+// 	return &userData
 
-}
+// }
 
-func (cache *UserCache) FlushSidebandData(userId uint) {
+// func (cache *UserCache) FlushSidebandData(userId uint) {
 
-	userKey := fmt.Sprintf("US%d", userId)
-	status := connections.RedisConnection().Del(context.Background(), userKey)
-	if status.Err() != nil {
-		panic(status.Err())
-	}
+// 	userKey := fmt.Sprintf("US%d", userId)
+// 	status := connections.RedisConnection().Del(context.Background(), userKey)
+// 	if status.Err() != nil {
+// 		panic(status.Err())
+// 	}
 
-}
+// }
 
-func (cache *UserCache) populateDiscussionBookmarks(userData *model.UserSidebandData) {
+// func (cache *UserCache) populateFolderSubscriptions(userData *model.UserSidebandData) {
 
-	userData.DiscussionBookmarks = make(map[uint]*model.UserDiscussionBookmark)
+// 	userData.FolderSubscriptions = make(map[uint]*model.UserFolderSubscription)
 
-	var discussionBookmarks []*model.UserDiscussionBookmark
-	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
-		if result := db.Raw("call get_user_discussion_bookmarks(?)", userData.UserId).Scan(&discussionBookmarks); result.Error != nil {
-			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-		}
-	})
+// 	var folderSubscriptions []*model.UserFolderSubscription
+// 	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
+// 		if result := db.Raw("call get_user_folder_subscriptions(?)", userData.UserId).Scan(&folderSubscriptions); result.Error != nil {
+// 			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+// 		}
+// 	})
 
-	for _, item := range discussionBookmarks {
-		userData.DiscussionBookmarks[item.DiscussionId] = item
-	}
+// 	for _, item := range folderSubscriptions {
+// 		userData.FolderSubscriptions[item.FolderId] = item
+// 	}
 
-}
+// }
 
-func (cache *UserCache) populateFolderSubscriptions(userData *model.UserSidebandData) {
+// func (cache *UserCache) populateFolderSubscriptionExceptions(userData *model.UserSidebandData) {
 
-	userData.FolderSubscriptions = make(map[uint]*model.UserFolderSubscription)
+// 	userData.FolderSubscriptionExceptions = make(map[uint]*model.UserFolderSubscriptionException)
 
-	var folderSubscriptions []*model.UserFolderSubscription
-	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
-		if result := db.Raw("call get_user_folder_subscriptions(?)", userData.UserId).Scan(&folderSubscriptions); result.Error != nil {
-			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-		}
-	})
+// 	var folderSubscriptionExceptions []*model.UserFolderSubscriptionException
+// 	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
+// 		if result := db.Raw("call get_user_folder_subscription_exceptions(?)", userData.UserId).Scan(&folderSubscriptionExceptions); result.Error != nil {
+// 			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+// 		}
+// 	})
 
-	for _, item := range folderSubscriptions {
-		userData.FolderSubscriptions[item.FolderId] = item
-	}
+// 	for _, item := range folderSubscriptionExceptions {
+// 		userData.FolderSubscriptionExceptions[item.DiscussionId] = item
+// 	}
 
-}
+// }
 
-func (cache *UserCache) populateFolderSubscriptionExceptions(userData *model.UserSidebandData) {
+// func (cache *UserCache) populateDiscussionSubscriptions(userData *model.UserSidebandData) {
 
-	userData.FolderSubscriptionExceptions = make(map[uint]*model.UserFolderSubscriptionException)
+// 	var discussionSubscriptions []*model.UserDiscussionSubscription
+// 	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
+// 		if result := db.Raw("call get_user_discussion_subscriptions(?)", userData.UserId).Scan(&discussionSubscriptions); result.Error != nil {
+// 			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+// 		}
+// 	})
 
-	var folderSubscriptionExceptions []*model.UserFolderSubscriptionException
-	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
-		if result := db.Raw("call get_user_folder_subscription_exceptions(?)", userData.UserId).Scan(&folderSubscriptionExceptions); result.Error != nil {
-			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-		}
-	})
+// 	userData.DiscussionSubscriptions = make(map[uint]*model.UserDiscussionSubscription)
+// 	for _, item := range discussionSubscriptions {
+// 		userData.DiscussionSubscriptions[item.DiscussionId] = item
+// 	}
 
-	for _, item := range folderSubscriptionExceptions {
-		userData.FolderSubscriptionExceptions[item.DiscussionId] = item
-	}
+// }
 
-}
+// func (cache *UserCache) SubscribeToDiscussion(discussion *model.Discussion, user *model.User) *model.UserSidebandData {
 
-func (cache *UserCache) populateDiscussionSubscriptions(userData *model.UserSidebandData) {
+// 	sidebandData := cache.GetSidebandData(user.Id)
 
-	var discussionSubscriptions []*model.UserDiscussionSubscription
-	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
-		if result := db.Raw("call get_user_discussion_subscriptions(?)", userData.UserId).Scan(&discussionSubscriptions); result.Error != nil {
-			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-		}
-	})
+// 	if _, exists := sidebandData.DiscussionBookmarks[discussion.Id]; !exists {
 
-	userData.DiscussionSubscriptions = make(map[uint]*model.UserDiscussionSubscription)
-	for _, item := range discussionSubscriptions {
-		userData.DiscussionSubscriptions[item.DiscussionId] = item
-	}
+// 		connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
 
-}
+// 			var discussionSubscriptions []*model.UserDiscussionSubscription
+// 			if result := db.Raw("call update_user_discussion_subscription(?, ?, ?)", user.Id, discussion.Id, 1).Scan(&discussionSubscriptions); result.Error != nil {
+// 				utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+// 			}
 
-func (cache *UserCache) SubscribeToDiscussion(discussion *model.Discussion, user *model.User) *model.UserSidebandData {
+// 			sidebandData.DiscussionSubscriptions = make(map[uint]*model.UserDiscussionSubscription)
+// 			for _, item := range discussionSubscriptions {
+// 				sidebandData.DiscussionSubscriptions[item.DiscussionId] = item
+// 			}
+// 			cache.PutSidebandData(sidebandData)
 
-	sidebandData := cache.GetSidebandData(user.Id)
+// 		})
+// 	}
 
-	if _, exists := sidebandData.DiscussionBookmarks[discussion.Id]; !exists {
+// 	return sidebandData
 
-		connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
+// }
 
-			var discussionSubscriptions []*model.UserDiscussionSubscription
-			if result := db.Raw("call update_user_discussion_subscription(?, ?, ?)", user.Id, discussion.Id, 1).Scan(&discussionSubscriptions); result.Error != nil {
-				utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-			}
+// func (cache *UserCache) GetDiscussionSubscriptionStatus(discussion *model.Discussion, user *model.User,) bool {
 
-			sidebandData.DiscussionSubscriptions = make(map[uint]*model.UserDiscussionSubscription)
-			for _, item := range discussionSubscriptions {
-				sidebandData.DiscussionSubscriptions[item.DiscussionId] = item
-			}
-			cache.PutSidebandData(sidebandData)
+// 	isSubscribed := false
 
-		})
-	}
+// 	if user != nil {
+// 		userData := cache.GetSidebandData(user.Id)
+// 		if _, exists := userData.DiscussionSubscriptions[discussion.Id]; exists {
+// 			isSubscribed = true
+// 		} else if _, exists := userData.FolderSubscriptions[discussion.FolderId]; exists {
+// 			if _, exists := userData.FolderSubscriptionExceptions[discussion.Id]; !exists {
+// 				isSubscribed = true
+// 			}
+// 		}
+// 	}
 
-	return sidebandData
+// 	return isSubscribed
 
-}
+// }
 
-func (cache *UserCache) GetDiscussionSubscriptionStatus(discussion *model.Discussion, user *model.User) bool {
+// func (cache *UserCache) GetFolderSubscriptionStatus(folder *model.Folder, user *model.User) bool {
 
-	isSubscribed := false
+// 	isSubscribed := false
 
-	if user != nil {
-		userData := cache.GetSidebandData(user.Id)
-		if _, exists := userData.DiscussionSubscriptions[discussion.Id]; exists {
-			isSubscribed = true
-		} else if _, exists := userData.FolderSubscriptions[discussion.FolderId]; exists {
-			if _, exists := userData.FolderSubscriptionExceptions[discussion.Id]; !exists {
-				isSubscribed = true
-			}
-		}
-	}
+// 	if user != nil {
+// 		userData := cache.GetSidebandData(user.Id)
+// 		if _, exists := userData.FolderSubscriptions[folder.Id]; exists {
+// 			isSubscribed = true
+// 		}
+// 	}
 
-	return isSubscribed
+// 	return isSubscribed
 
-}
-
-func (cache *UserCache) GetFolderSubscriptionStatus(folder *model.Folder, user *model.User) bool {
-
-	isSubscribed := false
-
-	if user != nil {
-		userData := cache.GetSidebandData(user.Id)
-		if _, exists := userData.FolderSubscriptions[folder.Id]; exists {
-			isSubscribed = true
-		}
-	}
-
-	return isSubscribed
-
-}
+// }
 
 func (cache *UserCache) AddSubscriber(user *model.User) *redis.PubSub {
 
@@ -369,5 +354,74 @@ func (cache *UserCache) IsActiveSubscriber(topic string) bool {
 
 	_, exists := cache.subscribers[topic]
 	return exists
+
+}
+
+func (cache *UserCache) GetBookmark(user *model.User, discussion *model.Discussion) *model.UserDiscussionBookmark {
+
+	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFn()
+
+	userKey := fmt.Sprintf("BK%d", user.Id)
+	field := strconv.Itoa(int(discussion.Id))
+
+	val, err := connections.RedisConnection().HGet(ctx, userKey, field).Result()
+	if err != redis.Nil {
+		var bookmark model.UserDiscussionBookmark
+		if err := json.Unmarshal([]byte(val), &bookmark); err != nil {
+			panic(utils.ErrInternalError)
+		}
+		return &bookmark
+	} else {
+		return nil
+	}
+
+}
+
+func (cache *UserCache) FlushBookmark(user *model.User, discussion *model.Discussion) {
+
+	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFn()
+
+	userKey := fmt.Sprintf("BK%d", user.Id)
+	field := strconv.Itoa(int(discussion.Id))
+
+	if status := connections.RedisConnection().HDel(ctx, userKey, field); status.Err() != nil {
+		panic(status.Err())
+	}
+
+}
+
+func (cache *UserCache) PutBookmark(bookmark *model.UserDiscussionBookmark) {
+
+	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFn()
+
+	data, err := json.Marshal(bookmark)
+	if err != nil {
+		panic(err)
+	}
+
+	userKey := fmt.Sprintf("BK%d", bookmark.UserId)
+	field := strconv.Itoa(int(bookmark.DiscussionId))
+
+	if status := connections.RedisConnection().HSet(ctx, userKey, field, string(data)); status.Err() != nil {
+		panic(status.Err())
+	}
+
+	connections.RedisConnection().Expire(context.Background(), userKey, time.Hour*24)
+
+}
+
+func (cache *UserCache) loadBookmarks(user *model.User, db *gorm.DB) {
+
+	var bookmarks []*model.UserDiscussionBookmark
+	if result := db.Raw("call get_user_discussion_bookmarks(?)", user.Id).Scan(&bookmarks); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	for _, bookmark := range bookmarks {
+		cache.PutBookmark(bookmark)
+	}
 
 }

@@ -640,6 +640,52 @@ BEGIN
 END //
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS get_discussion_subscription_status;
+DELIMITER //
+CREATE PROCEDURE get_discussion_subscription_status(IN $user_id bigint, IN $discussion_id bigint)
+BEGIN
+
+    declare $is_subscribed bigint;
+
+    select count(*) into $is_subscribed
+    from subscription s
+    where s.user_id = $user_id
+    and s.discussion_id = $discussion_id;
+
+    if $is_subscribed = 0 then
+
+        select count(*) into $is_subscribed
+        from folder_subscription fs
+        inner join discussion d
+        on fs.folder_id = d.folder_id
+        where fs.user_id = $user_id
+        and d.id = $discussion_id
+        and not fs.id in (select subscription_id from folder_subscription_exception where discussion_id = $discussion_id);
+
+    end if;
+
+    select $is_subscribed is_subscribed;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_folder_subscription_status;
+DELIMITER //
+CREATE PROCEDURE get_folder_subscription_status(IN $user_id bigint, IN $folder_id bigint)
+BEGIN
+
+    declare $is_subscribed bigint;
+
+    select count(*) into $is_subscribed
+    from folder_subscription fs
+    where fs.user_id = $user_id
+    and fs.folder_id = $folder_id;
+
+    select $is_subscribed is_subscribed;
+
+END //
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS update_user_discussion_subscription;
 DELIMITER //
 CREATE PROCEDURE update_user_discussion_subscription(IN $user_id bigint, IN $discussion_id bigint, IN $state int)
@@ -2074,7 +2120,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS delete_folder_subscription;
 DELIMITER //
-CREATE PROCEDURE delete_folder_subscription(IN $user_id bigint, IN $subscription_id bigint)
+CREATE PROCEDURE delete_folder_subscription(IN $user_id bigint, IN $folder_id bigint)
 BEGIN
 
     start transaction;
@@ -2083,11 +2129,11 @@ BEGIN
     from folder_subscription_exception
     inner join folder_subscription s
     on folder_subscription_exception.subscription_id = s.id
-    where s.id = $subscription_id
+    where s.folder_id = $folder_id
     and s.user_id = $user_id;
 
     delete from folder_subscription s
-    where s.id = $subscription_id
+    where s.folder_id = $folder_id
     and s.user_id = $user_id;
 
     commit work;

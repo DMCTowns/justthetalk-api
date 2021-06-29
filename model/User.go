@@ -54,6 +54,7 @@ type UserFolderSubscription struct {
 	UserId       uint      `json:"userId" gorm:"column:user_id"`
 	FolderId     uint      `json:"folderId" gorm:"column:folder_id"`
 	LastReadDate time.Time `json:"lastPostDate" gorm:"column:last_read_date"`
+	// TODO Url          string    `json:"url" gorm:"-"`
 }
 
 type UserFolderSubscriptionException struct {

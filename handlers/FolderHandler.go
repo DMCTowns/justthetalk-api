@@ -49,11 +49,26 @@ func NewFolderHandler(userCache *businesslogic.UserCache, folderCache *businessl
 func (h *FolderHandler) GetFolders(res http.ResponseWriter, req *http.Request) {
 	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
+		subsMap := make(map[uint]*model.UserFolderSubscription)
+		if user != nil {
+			subsList := businesslogic.GetFolderSubscriptions(user, db)
+			for _, sub := range subsList {
+				subsMap[sub.FolderId] = sub
+			}
+		}
+
 		var data []*model.Folder
 		for _, folder := range h.folderCache.Entries() {
 			shouldAdd := folder.Type == model.FolderTypeNormal || (user != nil && user.IsAdmin)
 			if shouldAdd {
-				data = append(data, folder)
+
+				var folderCopy model.Folder
+				copier.Copy(&folderCopy, &folder)
+
+				_, folderCopy.IsSubscribed = subsMap[folderCopy.Id]
+
+				data = append(data, &folderCopy)
+
 			}
 		}
 
@@ -68,11 +83,15 @@ func (h *FolderHandler) GetFolder(res http.ResponseWriter, req *http.Request) {
 		folderId := utils.ExtractVarInt("folderId", req)
 		folder := h.folderCache.Get(folderId, user)
 
-		if folder.Type == model.FolderTypeNormal {
-			return http.StatusOK, folder, ""
+		var folderCopy model.Folder
+		copier.Copy(&folderCopy, &folder)
+		folderCopy.IsSubscribed = businesslogic.GetFolderSubscriptionStatus(&folderCopy, user, db)
+
+		if folderCopy.Type == model.FolderTypeNormal {
+			return http.StatusOK, folderCopy, ""
 		} else {
 			if user != nil && user.IsAdmin {
-				return http.StatusOK, folder, ""
+				return http.StatusOK, folderCopy, ""
 			} else {
 				panic(utils.ErrForbidden)
 			}
@@ -131,8 +150,10 @@ func (h *FolderHandler) GetDiscussion(res http.ResponseWriter, req *http.Request
 			panic(utils.ErrBadRequest)
 		}
 
-		discussion.IsSubscribed = h.userCache.GetDiscussionSubscriptionStatus(discussion, user)
-		discussion.IsBlocked = h.discussionCache.IsBlocked(discussion, user)
+		if user != nil {
+			discussion.IsSubscribed = businesslogic.GetDiscussionSubscriptionStatus(discussion, user, db)
+			discussion.IsBlocked = h.discussionCache.IsBlocked(discussion, user)
+		}
 
 		return http.StatusOK, discussion, ""
 
@@ -185,22 +206,25 @@ func (h *FolderHandler) DeleteDiscussion(res http.ResponseWriter, req *http.Requ
 func (h *FolderHandler) GetPosts(res http.ResponseWriter, req *http.Request) {
 	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
-		var lastBookmark *model.UserDiscussionBookmark
-
 		folderId := utils.ExtractVarInt("folderId", req)
 		discussionId := utils.ExtractVarInt("discussionId", req)
+
+		folder := h.folderCache.Get(folderId, user)
+		discussion := h.discussionCache.Get(discussionId, user)
 
 		pageSize := 0
 		pageStart := 1
 
+		var lastBookmark *model.UserDiscussionBookmark
+		if user != nil {
+			lastBookmark = h.userCache.GetBookmark(user, discussion)
+		}
+
 		startParam := req.URL.Query().Get("start")
 		if len(startParam) > 0 {
 			pageStart = utils.ExtractQueryInt("start", req)
-		} else if user != nil {
-			sidebandData := h.userCache.GetSidebandData(user.Id)
-			if lastBookmark, exists := sidebandData.DiscussionBookmarks[discussionId]; exists {
-				pageStart = int(lastBookmark.LastPostCount)
-			}
+		} else if lastBookmark != nil {
+			pageStart = int(lastBookmark.LastPostCount)
 		}
 
 		if pageStart < pageSize {
@@ -208,9 +232,6 @@ func (h *FolderHandler) GetPosts(res http.ResponseWriter, req *http.Request) {
 		}
 
 		pageSize = utils.ExtractQueryInt("size", req)
-
-		folder := h.folderCache.Get(folderId, user)
-		discussion := h.discussionCache.Get(discussionId, user)
 
 		posts := businesslogic.GetPosts(folder, discussion, user, pageStart, pageSize, db)
 
@@ -224,7 +245,7 @@ func (h *FolderHandler) GetPosts(res http.ResponseWriter, req *http.Request) {
 					LastPostCount: lastPost.PostNum,
 					LastPostDate:  lastPost.CreatedDate,
 				}
-				h.bookmarkProcessor.Update(nextBookmark)
+				h.bookmarkProcessor.Enqueue(nextBookmark)
 			}
 		}
 
@@ -250,9 +271,10 @@ func (h *FolderHandler) CreatePost(res http.ResponseWriter, req *http.Request) {
 		created := businesslogic.CreatePost(folder, discussion, user, &post, h.discussionCache, h.userCache, db)
 		h.postProcessor.PublishPost(created)
 
-		sidebandData := h.userCache.GetSidebandData(user.Id)
 		returnPostsFromPostNum := created.PostNum
-		if lastBookmark, exists := sidebandData.DiscussionBookmarks[discussion.Id]; exists {
+
+		lastBookmark := h.userCache.GetBookmark(user, discussion)
+		if lastBookmark != nil {
 			returnPostsFromPostNum = lastBookmark.LastPostCount + 1
 		}
 
@@ -266,7 +288,7 @@ func (h *FolderHandler) CreatePost(res http.ResponseWriter, req *http.Request) {
 			LastPostCount: lastPost.PostNum,
 			LastPostDate:  lastPost.CreatedDate,
 		}
-		h.bookmarkProcessor.Update(nextBookmark)
+		h.bookmarkProcessor.Enqueue(nextBookmark)
 
 		return http.StatusOK, posts, ""
 
@@ -326,11 +348,11 @@ func (h *FolderHandler) SubscribeToDiscussion(res http.ResponseWriter, req *http
 
 		if req.Method == http.MethodPost {
 			businesslogic.SetDiscussionSubscriptionStatus(discussion, user, db, h.userCache)
+			discussion.IsSubscribed = true
 		} else {
 			businesslogic.UnsetDiscussionSubscriptionStatus(discussion, user, db, h.userCache)
+			discussion.IsSubscribed = false
 		}
-
-		discussion.IsSubscribed = h.userCache.GetDiscussionSubscriptionStatus(discussion, user)
 
 		return http.StatusOK, discussion, ""
 
@@ -343,16 +365,16 @@ func (h *FolderHandler) SubscribeToFolder(res http.ResponseWriter, req *http.Req
 		folderId := utils.ExtractVarInt("folderId", req)
 		folder := h.folderCache.Get(folderId, user)
 
-		if req.Method == http.MethodPost {
-			businesslogic.SetFolderSubscriptionStatus(folder, user, db, h.userCache)
-		} else {
-			businesslogic.UnsetFolderSubscriptionStatus(folder, user, db, h.userCache)
-		}
-
 		var folderCopy model.Folder
 		copier.Copy(&folderCopy, &folder)
 
-		folderCopy.IsSubscribed = h.userCache.GetFolderSubscriptionStatus(&folderCopy, user)
+		if req.Method == http.MethodPost {
+			businesslogic.SetFolderSubscriptionStatus(folder, user, db, h.userCache)
+			folderCopy.IsSubscribed = true
+		} else {
+			businesslogic.UnsetFolderSubscriptionStatus(folder, user, db, h.userCache)
+			folderCopy.IsSubscribed = false
+		}
 
 		return http.StatusOK, folderCopy, ""
 

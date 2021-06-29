@@ -194,29 +194,31 @@ func TestSetUnsetFolderSubscription(t *testing.T) {
 	discussion := discussionCache.Get(discussionId, user)
 
 	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
-		result := SetFolderSubscriptionStatus(folder, user, db, userCache)
-		if _, exists := result.FolderSubscriptions[folderId]; !exists {
+
+		SetDiscussionSubscriptionStatus(discussion, user, db, userCache)
+		subscribed := GetDiscussionSubscriptionStatus(discussion, user, db)
+		if !subscribed {
 			t.Error("Subscription not set")
 		}
 
-		result = SetDiscussionSubscriptionStatus(discussion, user, db, userCache)
-		if _, exists := result.DiscussionSubscriptions[discussionId]; exists {
-			t.Error("Set a discussion bookmark when shouldn't")
+		UnsetDiscussionSubscriptionStatus(discussion, user, db, userCache)
+		subscribed = GetDiscussionSubscriptionStatus(discussion, user, db)
+		if subscribed {
+			t.Error("Subscription set")
 		}
 
-		result = UnsetDiscussionSubscriptionStatus(discussion, user, db, userCache)
-		if _, exists := result.FolderSubscriptionExceptions[discussionId]; !exists {
-			t.Error("Subscription exception not set")
+		SetFolderSubscriptionStatus(folder, user, db, userCache)
+		subscribed = GetFolderSubscriptionStatus(folder, user, db)
+		if !subscribed {
+			t.Error("Subscription not set")
 		}
 
-		result = UnsetFolderSubscriptionStatus(folder, user, db, userCache)
-		if _, exists := result.FolderSubscriptions[folderId]; exists {
+		UnsetFolderSubscriptionStatus(folder, user, db, userCache)
+		subscribed = GetFolderSubscriptionStatus(folder, user, db)
+		if !subscribed {
 			t.Error("Subscription not unset")
 		}
 
-		if _, exists := result.FolderSubscriptionExceptions[discussionId]; exists {
-			t.Error("Subscription exception not cleared after unsubscribe")
-		}
 	})
 
 }
@@ -234,15 +236,35 @@ func TestSetUnsetDiscussionSubscription(t *testing.T) {
 	discussionId := uint(2801)
 	discussion := discussionCache.Get(discussionId, user)
 
-	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
-		result := SetDiscussionSubscriptionStatus(discussion, user, db, userCache)
-		if _, exists := result.DiscussionSubscriptions[discussionId]; !exists {
-			t.Error("Subscription not set")
-		}
+	connections.WithDatabase(60*time.Second, func(db *gorm.DB) {
 
-		result = UnsetDiscussionSubscriptionStatus(discussion, user, db, userCache)
-		if _, exists := result.DiscussionSubscriptions[discussionId]; exists {
-			t.Error("Subscription not unset")
+		SetDiscussionSubscriptionStatus(discussion, user, db, userCache)
+		UnsetDiscussionSubscriptionStatus(discussion, user, db, userCache)
+
+	})
+
+}
+func TestGetUserSubscriptionStatus(t *testing.T) {
+
+	userCache := NewUserCache()
+	folderCache := NewFolderCache()
+	discussionCache := NewDiscussionCache(folderCache)
+
+	user := userCache.Get(50)
+
+	connections.WithDatabase(60*time.Second, func(db *gorm.DB) {
+		discussion := discussionCache.Get(2494, user)
+		subscribed := GetDiscussionSubscriptionStatus(discussion, user, db)
+		if !subscribed {
+			t.Error("Not subscribed")
+		}
+	})
+
+	connections.WithDatabase(60*time.Second, func(db *gorm.DB) {
+		discussion := discussionCache.Get(2495, user)
+		subscribed := GetDiscussionSubscriptionStatus(discussion, user, db)
+		if subscribed {
+			t.Error("Subscribed")
 		}
 	})
 

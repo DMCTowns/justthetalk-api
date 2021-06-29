@@ -77,6 +77,36 @@ func ValidateUserLogin(credentials model.LoginCredentials, ipAddress string, db 
 
 }
 
+func GetDiscussionSubscriptionStatus(discussion *model.Discussion, user *model.User, db *gorm.DB) bool {
+
+	var isSubscribed int64
+	if result := db.Raw("call get_discussion_subscription_status(?, ?)", user.Id, discussion.Id).First(&isSubscribed); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	if isSubscribed == 0 {
+		return false
+	} else {
+		return true
+	}
+
+}
+
+func GetFolderSubscriptionStatus(folder *model.Folder, user *model.User, db *gorm.DB) bool {
+
+	var isSubscribed int64
+	if result := db.Raw("call get_folder_subscription_status(?, ?)", user.Id, folder.Id).First(&isSubscribed); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	if isSubscribed == 0 {
+		return false
+	} else {
+		return true
+	}
+
+}
+
 func MarkFolderSubscriptionsRead(subsList []uint, user *model.User, db *gorm.DB, userCache *UserCache) []*model.UserFolderSubscription {
 
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -99,8 +129,6 @@ func MarkFolderSubscriptionsRead(subsList []uint, user *model.User, db *gorm.DB,
 	if result := db.Raw("call get_folder_subscriptions(?)", user.Id).Scan(&entries); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
-
-	userCache.FlushSidebandData(user.Id)
 
 	return entries
 
@@ -128,8 +156,6 @@ func MarkDiscussionSubscriptionsRead(subsList []uint, user *model.User, db *gorm
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	userCache.FlushSidebandData(user.Id)
-
 	return entries
 
 }
@@ -152,12 +178,10 @@ func DeleteFolderSubscriptions(subsList []uint, user *model.User, db *gorm.DB, u
 		utils.PanicWithWrapper(err, utils.ErrInternalError)
 	}
 
-	var entries []*model.UserFolderSubscription
+	entries := make([]*model.UserFolderSubscription, 0)
 	if result := db.Raw("call get_folder_subscriptions(?)", user.Id).Scan(&entries); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
-
-	userCache.FlushSidebandData(user.Id)
 
 	return entries
 
@@ -180,28 +204,16 @@ func DeleteDiscussionSubscriptions(subsList []uint, user *model.User, db *gorm.D
 		utils.PanicWithWrapper(err, utils.ErrInternalError)
 	}
 
-	var entries []*model.FrontPageEntry
-	if result := db.Raw("call get_discussion_subscriptions(?)", user.Id).Scan(&entries); result.Error != nil {
+	subscriptions := make([]*model.FrontPageEntry, 0)
+	if result := db.Raw("call get_discussion_subscriptions(?)", user.Id).Scan(&subscriptions); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	userCache.FlushSidebandData(user.Id)
-
-	return entries
-
-}
-
-func updateDiscussionSubscription(userData *model.UserSidebandData, discussionId uint, subscriptionState int, db *gorm.DB) {
-
-	var discussionSubs []*model.UserDiscussionSubscription
-	if result := db.Raw("call update_user_discussion_subscription(?, ?, ?)", userData.UserId, discussionId, subscriptionState).Scan(&discussionSubs); result.Error != nil {
-		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	for _, sub := range subscriptions {
+		sub.Url = utils.UrlForFrontPageEntry(sub)
 	}
 
-	userData.DiscussionSubscriptions = make(map[uint]*model.UserDiscussionSubscription)
-	for _, sub := range discussionSubs {
-		userData.DiscussionSubscriptions[sub.DiscussionId] = sub
-	}
+	return subscriptions
 
 }
 
@@ -223,99 +235,55 @@ func updateFolderSubscription(userData *model.UserSidebandData, folderId uint, s
 
 }
 
-func updateFolderSubscriptionException(userData *model.UserSidebandData, folderId uint, discussionId uint, subscriptionState int, db *gorm.DB) {
+func SetDiscussionSubscriptionStatus(discussion *model.Discussion, user *model.User, db *gorm.DB, userCache *UserCache) {
 
-	var exceptionSubs []*model.UserFolderSubscriptionException
-	if result := db.Raw("call update_user_folder_subscription_exception(?, ?, ?)", userData.UserId, discussionId, subscriptionState).Scan(&exceptionSubs); result.Error != nil {
+	if result := db.Exec("call update_user_discussion_subscription(?, ?, ?)", user.Id, discussion.Id, 1); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	userData.FolderSubscriptionExceptions = make(map[uint]*model.UserFolderSubscriptionException)
-	for _, sub := range exceptionSubs {
-		userData.FolderSubscriptionExceptions[sub.DiscussionId] = sub
+}
+
+func UnsetDiscussionSubscriptionStatus(discussion *model.Discussion, user *model.User, db *gorm.DB, userCache *UserCache) {
+
+	if result := db.Exec("call update_user_discussion_subscription(?, ?, ?)", user.Id, discussion.Id, 0); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
 }
 
-func SetDiscussionSubscriptionStatus(discussion *model.Discussion, user *model.User, db *gorm.DB, userCache *UserCache) *model.UserSidebandData {
+func SetFolderSubscriptionStatus(folder *model.Folder, user *model.User, db *gorm.DB, userCache *UserCache) {
 
-	userData := userCache.GetSidebandData(user.Id)
-
-	if _, exists := userData.FolderSubscriptions[discussion.FolderId]; exists {
-		if _, exists := userData.FolderSubscriptionExceptions[discussion.Id]; exists {
-			updateFolderSubscriptionException(userData, discussion.FolderId, discussion.Id, 0, db)
-		}
-		discussion.IsSubscribed = false
-	} else if _, exists := userData.DiscussionSubscriptions[discussion.Id]; !exists {
-		updateDiscussionSubscription(userData, discussion.Id, 1, db)
-		discussion.IsSubscribed = true
+	if result := db.Exec("call update_user_folder_subscription(?, ?, ?)", user.Id, folder.Id, 1); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
-
-	userCache.PutSidebandData(userData)
-
-	return userData
 
 }
 
-func UnsetDiscussionSubscriptionStatus(discussion *model.Discussion, user *model.User, db *gorm.DB, userCache *UserCache) *model.UserSidebandData {
+func UnsetFolderSubscriptionStatus(folder *model.Folder, user *model.User, db *gorm.DB, userCache *UserCache) {
 
-	userData := userCache.GetSidebandData(user.Id)
-
-	if _, exists := userData.FolderSubscriptions[discussion.FolderId]; exists {
-		if _, exists := userData.FolderSubscriptionExceptions[discussion.Id]; !exists {
-			updateFolderSubscriptionException(userData, discussion.FolderId, discussion.Id, 1, db)
-		}
-	} else if _, exists := userData.DiscussionSubscriptions[discussion.Id]; exists {
-		updateDiscussionSubscription(userData, discussion.Id, 0, db)
+	if result := db.Exec("call update_user_folder_subscription(?, ?, ?)", user.Id, folder.Id, 0); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
-
-	userCache.PutSidebandData(userData)
-
-	return userData
-
-}
-
-func SetFolderSubscriptionStatus(folder *model.Folder, user *model.User, db *gorm.DB, userCache *UserCache) *model.UserSidebandData {
-
-	userData := userCache.GetSidebandData(user.Id)
-
-	if _, exists := userData.FolderSubscriptions[folder.Id]; !exists {
-		updateFolderSubscription(userData, folder.Id, 1, db)
-	}
-
-	userCache.PutSidebandData(userData)
-
-	return userData
-
-}
-
-func UnsetFolderSubscriptionStatus(folder *model.Folder, user *model.User, db *gorm.DB, userCache *UserCache) *model.UserSidebandData {
-
-	userData := userCache.GetSidebandData(user.Id)
-
-	if _, exists := userData.FolderSubscriptions[folder.Id]; exists {
-		updateFolderSubscription(userData, folder.Id, 0, db)
-	}
-
-	userCache.PutSidebandData(userData)
-
-	return userData
 
 }
 
 func GetDiscussionSubscriptions(user *model.User, db *gorm.DB) []*model.FrontPageEntry {
 
-	var entries []*model.FrontPageEntry
-	if result := db.Raw("call get_discussion_subscriptions(?)", user.Id).Scan(&entries); result.Error != nil {
+	subscriptions := make([]*model.FrontPageEntry, 0)
+	if result := db.Raw("call get_discussion_subscriptions(?)", user.Id).Scan(&subscriptions); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	return entries
+	for _, sub := range subscriptions {
+		sub.Url = utils.UrlForFrontPageEntry(sub)
+	}
+
+	return subscriptions
 }
 
 func GetFolderSubscriptions(user *model.User, db *gorm.DB) []*model.UserFolderSubscription {
 
-	var subscriptions []*model.UserFolderSubscription
+	subscriptions := make([]*model.UserFolderSubscription, 0)
 	if result := db.Raw("call get_folder_subscriptions(?)", user.Id).Scan(&subscriptions); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
@@ -326,7 +294,7 @@ func GetFolderSubscriptions(user *model.User, db *gorm.DB) []*model.UserFolderSu
 
 func GetFolderSubscriptionExcepions(user *model.User, db *gorm.DB) []*model.UserFolderSubscriptionException {
 
-	var exceptions []*model.UserFolderSubscriptionException
+	exceptions := make([]*model.UserFolderSubscriptionException, 0)
 	if result := db.Raw("call get_folder_subscription_exceptions(?)", user.Id).Scan(&exceptions); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
@@ -368,8 +336,6 @@ func UpdateFolderSubscriptions(subsList []uint, user *model.User, db *gorm.DB, u
 	}
 
 	results := GetFolderSubscriptions(user, db)
-
-	userCache.FlushSidebandData(user.Id)
 
 	return results
 
@@ -641,7 +607,7 @@ func DeleteDiscussionBookmark(user *model.User, discussion *model.Discussion, us
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	userCache.FlushSidebandData(user.Id)
+	userCache.FlushBookmark(user, discussion)
 
 }
 

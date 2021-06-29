@@ -44,31 +44,3 @@ func TestGetUser(t *testing.T) {
 	}
 
 }
-
-func TestGetUserSideband(t *testing.T) {
-
-	userCache := NewUserCache()
-
-	userData := userCache.GetSidebandData(50)
-
-	if userData.UserId != 50 {
-		t.Error("Failed to load user data")
-	}
-
-}
-
-func TestGetUserSubscriptionStatus(t *testing.T) {
-
-	userCache := NewUserCache()
-	folderCache := NewFolderCache()
-	discussionCache := NewDiscussionCache(folderCache)
-
-	user := userCache.Get(519)
-	discussion := discussionCache.Get(21563, user)
-
-	subscribed := userCache.GetDiscussionSubscriptionStatus(discussion, user)
-	if !subscribed {
-		t.Error("Not subscribed")
-	}
-
-}

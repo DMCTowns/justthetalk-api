@@ -48,7 +48,7 @@ func NewBookmarkProcessor() *BookmarkProcessor {
 
 }
 
-func (cache *BookmarkProcessor) Update(bookmark *model.UserDiscussionBookmark) {
+func (cache *BookmarkProcessor) Enqueue(bookmark *model.UserDiscussionBookmark) {
 	cache.updateChannel <- bookmark
 }
 
@@ -81,8 +81,6 @@ func (cache *BookmarkProcessor) processBookmark(bookmark *model.UserDiscussionBo
 		}
 	})
 
-	sidebandData := cache.userCache.GetSidebandData(bookmark.UserId)
-	sidebandData.DiscussionBookmarks[bookmark.DiscussionId] = bookmark
-	cache.userCache.PutSidebandData(sidebandData)
+	cache.userCache.PutBookmark(bookmark)
 
 }
