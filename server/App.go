@@ -187,8 +187,11 @@ func (a *App) configureAdminRouter(router *mux.Router) {
 
 	adminRouter.HandleFunc("/moderation/queue", adminHandler.GetModerationQueue).Methods(http.MethodGet, http.MethodOptions)
 
-	adminRouter.HandleFunc("/discussion/{discussionId}/report", adminHandler.GetDiscussionReports).Methods(http.MethodGet, http.MethodOptions)
-	adminRouter.HandleFunc("/discussion/{discussionId}/comment", adminHandler.GetComments).Methods(http.MethodGet, http.MethodOptions)
+	adminRouter.HandleFunc("/discussion/{discussionId}/report", adminHandler.GetReportsByDiscussion).Methods(http.MethodGet, http.MethodOptions)
+	adminRouter.HandleFunc("/discussion/{discussionId}/comment", adminHandler.GetCommentsByDiscussion).Methods(http.MethodGet, http.MethodOptions)
+	adminRouter.HandleFunc("/discussion/{discussionId}/post/{postId}/report", adminHandler.GetReportsByPost).Methods(http.MethodGet, http.MethodOptions)
+	adminRouter.HandleFunc("/discussion/{discussionId}/post/{postId}/comment", adminHandler.GetCommentsByPost).Methods(http.MethodGet, http.MethodOptions)
+
 	adminRouter.HandleFunc("/discussion/{discussionId}/post/{postId}/report", adminHandler.CreateComment).Methods(http.MethodPost, http.MethodOptions)
 	adminRouter.HandleFunc("/discussion/{discussionId}/post/{postId}/delete", adminHandler.DeletePost).Methods(http.MethodPost, http.MethodOptions)
 	adminRouter.HandleFunc("/discussion/{discussionId}/post/{postId}/delete", adminHandler.UndeletePost).Methods(http.MethodDelete, http.MethodOptions)

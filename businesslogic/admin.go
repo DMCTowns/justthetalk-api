@@ -87,36 +87,46 @@ func AdminDeleteNoUndeletePost(postId uint, discussion *model.Discussion, delete
 
 func GetModerationQueue(folderCache *FolderCache, discussionCache *DiscussionCache, db *gorm.DB) []*model.Post {
 
-	results := make([]*model.Post, 0)
+	posts := make([]*model.Post, 0)
 
-	if result := db.Raw("call get_moderation_queue()").Find(&results); result.Error != nil {
+	if result := db.Raw("call get_moderation_queue()").Find(&posts); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	// ugh!
-	for _, post := range results {
-
-		if !(post.Status == model.PostStatusSuspendedByAdmin || post.Status == model.PostStatusWatch) {
-			post.UserReports = make([]*model.PostReport, 0)
-			db.Table("post_report").Where("post_id = ?", post.Id).Find(&post.UserReports)
-		}
-
-		post.ModeratorComments = make([]*model.ModeratorComment, 0)
-		db.Table("moderator_comment").Where("post_id = ?", post.Id).Find(&post.ModeratorComments)
-
+	for _, post := range posts {
 		discussion := discussionCache.UnsafeGet(post.DiscussionId)
 		folder := folderCache.UnsafeGet(discussion.FolderId)
-
 		post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
 		post.Url = utils.UrlForPost(folder, discussion, post)
+	}
 
+	return posts
+
+}
+
+func GetReportsByPost(postId uint, db *gorm.DB) []*model.PostReport {
+
+	results := make([]*model.PostReport, 0)
+	if result := db.Raw("call get_reports_by_post(?)", postId).Scan(&results); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
 	return results
 
 }
 
-func GetDiscussionReports(discussion *model.Discussion, db *gorm.DB) []*model.PostReport {
+func GetCommentsByPost(postId uint, db *gorm.DB) []*model.ModeratorComment {
+
+	results := make([]*model.ModeratorComment, 0)
+	if result := db.Raw("call get_comments_by_post(?)", postId).Scan(&results); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	return results
+
+}
+
+func GetReportsByDiscussion(discussion *model.Discussion, db *gorm.DB) []*model.PostReport {
 
 	results := make([]*model.PostReport, 0)
 	if result := db.Raw("call get_reports_by_discussion(?)", discussion.Id).Scan(&results); result.Error != nil {
@@ -127,7 +137,7 @@ func GetDiscussionReports(discussion *model.Discussion, db *gorm.DB) []*model.Po
 
 }
 
-func GetComments(discussion *model.Discussion, db *gorm.DB) []*model.ModeratorComment {
+func GetCommentsByDiscussion(discussion *model.Discussion, db *gorm.DB) []*model.ModeratorComment {
 
 	results := make([]*model.ModeratorComment, 0)
 	if result := db.Raw("call get_comments_by_discussion(?)", discussion.Id).Scan(&results); result.Error != nil {
@@ -138,7 +148,7 @@ func GetComments(discussion *model.Discussion, db *gorm.DB) []*model.ModeratorCo
 
 }
 
-func CreateComment(comment *model.ModeratorComment, discussion *model.Discussion, post *model.Post, user *model.User, db *gorm.DB) ([]*model.ModeratorComment, *model.Post) {
+func CreateComment(comment *model.ModeratorComment, folder *model.Folder, discussion *model.Discussion, post *model.Post, user *model.User, db *gorm.DB) ([]*model.ModeratorComment, *model.Post) {
 
 	results := make([]*model.ModeratorComment, 0)
 	if result := db.Raw("call create_admin_coment(?, ?, ?, ?)", post.Id, user.Id, comment.Body, comment.Vote).Scan(&results); result.Error != nil {
@@ -164,11 +174,12 @@ func CreateComment(comment *model.ModeratorComment, discussion *model.Discussion
 		}
 
 		var post model.Post
-		if result := db.Raw("call set_post_status(?, ?)", post.Id, post.Status, totalVote).First(&post); result.Error != nil {
+		if result := db.Raw("call set_post_status(?, ?, ?, ?)", discussion.Id, post.Id, post.Status, totalVote).First(&post); result.Error != nil {
 			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 		}
 
 		post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
+		post.Url = utils.UrlForPost(folder, discussion, &post)
 
 	}
 

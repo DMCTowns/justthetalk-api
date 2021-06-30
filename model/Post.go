@@ -51,9 +51,6 @@ type Post struct {
 	PostAsAdmin           bool      `json:"postAsAdmin,omitempty" gorm:"-"`
 	SubscribeToDiscussion bool      `json:"subscribeToDiscussion,omitempty" gorm:"-"`
 	Url                   string    `json:"url" gorm:"-"`
-
-	UserReports       []*PostReport       `json:"userReports"`
-	ModeratorComments []*ModeratorComment `json:"moderatorComments"`
 }
 
 type IndexablePost struct {

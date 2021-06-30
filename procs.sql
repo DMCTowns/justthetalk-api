@@ -1889,6 +1889,50 @@ BEGIN
 END //
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS get_reports_by_post;
+DELIMITER //
+CREATE PROCEDURE get_reports_by_post(IN $post_id bigint)
+BEGIN
+
+    select pr.*,
+    p.status post_status,
+    p.moderation_score,
+    p.moderation_result,
+    p.created_date post_created_date,
+    p.post_num,
+    p.discussion_id,
+    p.user_id,
+    u.username
+    from post_report pr
+    inner join post p
+    on pr.post_id = p.id
+    inner join user u
+    on p.user_id = u.id
+    where p.id = $post_id
+    order by pr.created_date;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_comments_by_post;
+DELIMITER //
+CREATE PROCEDURE get_comments_by_post(IN $post_id bigint)
+BEGIN
+
+
+    select c.*, u.username
+    from moderator_comment c
+    inner join post p
+    on c.post_id = p.id
+    inner join user u
+    on c.user_id = u.id
+    where p.id = $post_id
+    order by c.created_date;
+
+END //
+DELIMITER ;
+
+
 DROP PROCEDURE IF EXISTS create_admin_coment;
 DELIMITER //
 CREATE PROCEDURE create_admin_coment(IN $post_id bigint, IN $user_id bigint, IN $body varchar(255), IN $vote int)

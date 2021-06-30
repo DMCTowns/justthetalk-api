@@ -56,26 +56,56 @@ func (h *AdminHandler) GetModerationQueue(res http.ResponseWriter, req *http.Req
 	})
 }
 
-func (h *AdminHandler) GetDiscussionReports(res http.ResponseWriter, req *http.Request) {
+func (h *AdminHandler) GetReportsByPost(res http.ResponseWriter, req *http.Request) {
 	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
 		discussionId := utils.ExtractVarInt("discussionId", req)
-		discussion := h.discussionCache.Get(discussionId, user)
+		h.discussionCache.Get(discussionId, user)
 
-		results := businesslogic.GetDiscussionReports(discussion, db)
+		postId := utils.ExtractVarInt("postId", req)
+
+		results := businesslogic.GetReportsByPost(postId, db)
 
 		return http.StatusOK, results, ""
 
 	})
 }
 
-func (h *AdminHandler) GetComments(res http.ResponseWriter, req *http.Request) {
+func (h *AdminHandler) GetCommentsByPost(res http.ResponseWriter, req *http.Request) {
+	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		discussionId := utils.ExtractVarInt("discussionId", req)
+		h.discussionCache.Get(discussionId, user)
+
+		postId := utils.ExtractVarInt("postId", req)
+
+		results := businesslogic.GetCommentsByPost(postId, db)
+
+		return http.StatusOK, results, ""
+
+	})
+}
+
+func (h *AdminHandler) GetReportsByDiscussion(res http.ResponseWriter, req *http.Request) {
 	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
 		discussionId := utils.ExtractVarInt("discussionId", req)
 		discussion := h.discussionCache.Get(discussionId, user)
 
-		results := businesslogic.GetComments(discussion, db)
+		results := businesslogic.GetReportsByDiscussion(discussion, db)
+
+		return http.StatusOK, results, ""
+
+	})
+}
+
+func (h *AdminHandler) GetCommentsByDiscussion(res http.ResponseWriter, req *http.Request) {
+	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		discussionId := utils.ExtractVarInt("discussionId", req)
+		discussion := h.discussionCache.Get(discussionId, user)
+
+		results := businesslogic.GetCommentsByDiscussion(discussion, db)
 
 		return http.StatusOK, results, ""
 
@@ -94,13 +124,14 @@ func (h *AdminHandler) CreateComment(res http.ResponseWriter, req *http.Request)
 		}
 
 		discussion := h.discussionCache.Get(discussionId, user)
+		folder := h.folderCache.Get(discussion.FolderId, user)
 		post := businesslogic.GetPost(postId, db)
 
 		if post.DiscussionId != discussionId {
 			panic(utils.ErrBadRequest)
 		}
 
-		results, post := businesslogic.CreateComment(&comment, discussion, post, user, db)
+		results, post := businesslogic.CreateComment(&comment, folder, discussion, post, user, db)
 
 		h.postProcessor.PublishPost(post)
 
