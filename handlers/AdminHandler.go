@@ -277,8 +277,9 @@ func (h *AdminHandler) DeletePost(res http.ResponseWriter, req *http.Request) {
 		postId := utils.ExtractVarInt("postId", req)
 
 		discussion := h.discussionCache.Get(discussionId, user)
+		folder := h.folderCache.Get(discussion.FolderId, user)
 
-		post := businesslogic.AdminDeleteNoUndeletePost(postId, discussion, true, db)
+		post := businesslogic.AdminDeleteNoUndeletePost(postId, folder, discussion, true, db)
 
 		post.Markup = h.postFormatter.ApplyPostFormatting(post.Text, discussion)
 		h.postProcessor.PublishPost(post)
@@ -295,8 +296,9 @@ func (h *AdminHandler) UndeletePost(res http.ResponseWriter, req *http.Request) 
 		postId := utils.ExtractVarInt("postId", req)
 
 		discussion := h.discussionCache.Get(discussionId, user)
+		folder := h.folderCache.Get(discussion.FolderId, user)
 
-		post := businesslogic.AdminDeleteNoUndeletePost(postId, discussion, false, db)
+		post := businesslogic.AdminDeleteNoUndeletePost(postId, folder, discussion, false, db)
 
 		post.Markup = h.postFormatter.ApplyPostFormatting(post.Text, discussion)
 		h.postProcessor.PublishPost(post)
