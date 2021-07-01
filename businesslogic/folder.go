@@ -182,13 +182,19 @@ func GetPosts(folder *model.Folder, discussion *model.Discussion, user *model.Us
 		post.Url = utils.UrlForPost(folder, discussion, post)
 
 		if user == nil || !user.IsAdmin {
-			if post.Status == model.PostStatusPostedByAdmin {
+			switch post.Status {
+			case model.PostStatusPostedByAdmin:
 				post.CreatedByUserId = 1
 				post.CreatedByUsername = "JUSTtheTalk"
-			} else if post.Status > 0 || !post.CreatedByEnabled {
+
+			case model.PostStatusSuspendedByAdmin:
+			case model.PostStatusDeletedByAdmin:
+			case model.PostStatusDeletedByUser:
+			case model.PostStatusInvisible:
 				post.CreatedByUserId = 0
 				post.CreatedByUsername = ""
 				post.Text = ""
+
 			}
 		}
 	}
