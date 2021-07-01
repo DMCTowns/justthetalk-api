@@ -212,13 +212,13 @@ func (h *FolderHandler) GetPosts(res http.ResponseWriter, req *http.Request) {
 		folder := h.folderCache.Get(folderId, user)
 		discussion := h.discussionCache.Get(discussionId, user)
 
-		pageSize := 0
-		pageStart := 1
-
 		var lastBookmark *model.UserDiscussionBookmark
 		if user != nil {
 			lastBookmark = h.userCache.GetBookmark(user, discussion)
 		}
+
+		pageSize := 0
+		pageStart := 1
 
 		startParam := req.URL.Query().Get("start")
 		if len(startParam) > 0 {
