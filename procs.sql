@@ -2485,4 +2485,161 @@ BEGIN
 END //
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS search_users;
+DELIMITER //
+CREATE PROCEDURE search_users(IN $search_term varchar(20))
+BEGIN
 
+    select u.id,
+    u.version,
+    u.email,
+    u.username,
+    u.created_date,
+    u.last_updated,
+    u.last_login_date,
+    case u.account_expired when 1 then 1 else 0 end account_expired,
+    case u.account_locked when 1 then 1 else 0 end account_locked,
+    case u.enabled when 1 then 1 else 0 end enabled,
+    case u.password_expired when 1 then 1 else 0 end password_expired,
+    case o.premoderate when 1 then 1 else 0 end is_premoderate,
+    case o.watch when 1 then 1 else 0 end is_watch,
+    case coalesce(a.is_admin, 0) when 0 then 0 else 1 end is_admin,
+    u.email_verified
+    from user u
+    left join user_options o
+    on u.id = o.user_id
+    left join (select user_id, count(*) is_admin from user_role where role_id in (2, 3) group by user_id) a
+    on u.id = a.user_id
+    where u.username like $search_term
+    order by u.username;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS search_users_premod;
+DELIMITER //
+CREATE PROCEDURE search_users_premod()
+BEGIN
+
+    select u.id,
+    u.version,
+    u.email,
+    u.username,
+    u.created_date,
+    u.last_updated,
+    u.last_login_date,
+    case u.account_expired when 1 then 1 else 0 end account_expired,
+    case u.account_locked when 1 then 1 else 0 end account_locked,
+    case u.enabled when 1 then 1 else 0 end enabled,
+    case u.password_expired when 1 then 1 else 0 end password_expired,
+    case o.premoderate when 1 then 1 else 0 end is_premoderate,
+    case o.watch when 1 then 1 else 0 end is_watch,
+    case coalesce(a.is_admin, 0) when 0 then 0 else 1 end is_admin,
+    u.email_verified
+    from user u
+    left join user_options o
+    on u.id = o.user_id
+    left join (select user_id, count(*) is_admin from user_role where role_id in (2, 3) group by user_id) a
+    on u.id = a.user_id
+    where not last_login_date is null
+    and o.premoderate = 1
+    order by u.username;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS search_users_watch;
+DELIMITER //
+CREATE PROCEDURE search_users_watch()
+BEGIN
+
+    select u.id,
+    u.version,
+    u.email,
+    u.username,
+    u.created_date,
+    u.last_updated,
+    u.last_login_date,
+    case u.account_expired when 1 then 1 else 0 end account_expired,
+    case u.account_locked when 1 then 1 else 0 end account_locked,
+    case u.enabled when 1 then 1 else 0 end enabled,
+    case u.password_expired when 1 then 1 else 0 end password_expired,
+    case o.premoderate when 1 then 1 else 0 end is_premoderate,
+    case o.watch when 1 then 1 else 0 end is_watch,
+    case coalesce(a.is_admin, 0) when 0 then 0 else 1 end is_admin,
+    u.email_verified
+    from user u
+    left join user_options o
+    on u.id = o.user_id
+    left join (select user_id, count(*) is_admin from user_role where role_id in (2, 3) group by user_id) a
+    on u.id = a.user_id
+    where not last_login_date is null
+    and o.watch = 1
+    order by u.username;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS search_users_locked;
+DELIMITER //
+CREATE PROCEDURE search_users_locked()
+BEGIN
+
+    select u.id,
+    u.version,
+    u.email,
+    u.username,
+    u.created_date,
+    u.last_updated,
+    u.last_login_date,
+    case u.account_expired when 1 then 1 else 0 end account_expired,
+    case u.account_locked when 1 then 1 else 0 end account_locked,
+    case u.enabled when 1 then 1 else 0 end enabled,
+    case u.password_expired when 1 then 1 else 0 end password_expired,
+    case o.premoderate when 1 then 1 else 0 end is_premoderate,
+    case o.watch when 1 then 1 else 0 end is_watch,
+    case coalesce(a.is_admin, 0) when 0 then 0 else 1 end is_admin,
+    u.email_verified
+    from user u
+    left join user_options o
+    on u.id = o.user_id
+    left join (select user_id, count(*) is_admin from user_role where role_id in (2, 3) group by user_id) a
+    on u.id = a.user_id
+    where not last_login_date is null
+    and u.account_locked = 1
+    order by u.username;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS search_users_recent;
+DELIMITER //
+CREATE PROCEDURE search_users_recent()
+BEGIN
+
+    select u.id,
+    u.version,
+    u.email,
+    u.username,
+    u.created_date,
+    u.last_updated,
+    u.last_login_date,
+    case u.account_expired when 1 then 1 else 0 end account_expired,
+    case u.account_locked when 1 then 1 else 0 end account_locked,
+    case u.enabled when 1 then 1 else 0 end enabled,
+    case u.password_expired when 1 then 1 else 0 end password_expired,
+    case o.premoderate when 1 then 1 else 0 end is_premoderate,
+    case o.watch when 1 then 1 else 0 end is_watch,
+    case coalesce(a.is_admin, 0) when 0 then 0 else 1 end is_admin,
+    u.email_verified
+    from user u
+    left join user_options o
+    on u.id = o.user_id
+    left join (select user_id, count(*) is_admin from user_role where role_id in (2, 3) group by user_id) a
+    on u.id = a.user_id
+    where not last_login_date is null
+    and u.created_date > date_sub(now(), interval 30 day)
+    order by u.username;
+
+END //
+DELIMITER ;
