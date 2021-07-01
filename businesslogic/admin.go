@@ -66,7 +66,7 @@ func UnblockUser(discussion *model.Discussion, user *model.User, db *gorm.DB) ma
 
 }
 
-func AdminDeleteNoUndeletePost(postId uint, discussion *model.Discussion, deleteNotUndelete bool, db *gorm.DB) *model.Post {
+func AdminDeleteNoUndeletePost(postId uint, folder *model.Folder, discussion *model.Discussion, deleteNotUndelete bool, db *gorm.DB) *model.Post {
 
 	var post model.Post
 
@@ -80,8 +80,28 @@ func AdminDeleteNoUndeletePost(postId uint, discussion *model.Discussion, delete
 	}
 
 	post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
+	post.Url = utils.UrlForPost(folder, discussion, &post)
 
 	return &post
+
+}
+
+func GetModerationHistory(pageStart int, pageSize int, folderCache *FolderCache, discussionCache *DiscussionCache, db *gorm.DB) []*model.Post {
+
+	posts := make([]*model.Post, 0)
+
+	if result := db.Raw("call get_moderated_posts(?, ?)", pageStart*pageSize, pageSize).Find(&posts); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	for _, post := range posts {
+		discussion := discussionCache.UnsafeGet(post.DiscussionId)
+		folder := folderCache.UnsafeGet(discussion.FolderId)
+		post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
+		post.Url = utils.UrlForPost(folder, discussion, post)
+	}
+
+	return posts
 
 }
 

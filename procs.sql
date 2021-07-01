@@ -1803,6 +1803,51 @@ BEGIN
 END //
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS get_moderated_posts;
+DELIMITER //
+CREATE PROCEDURE get_moderated_posts(IN $page_start int, IN $page_size int)
+BEGIN
+
+    select p.id,
+    p.version,
+    p.created_date,
+    p.discussion_id,
+    d.status discussion_status,
+    p.text,
+    p.user_id,
+    case p.deleted when 1 then 1 else 0 end deleted,
+    p.moderation_result,
+    p.moderation_score,
+    p.status,
+    p.last_edit_date,
+    case p.markdown when 1 then 1 else 0 end markdown,
+    p.post_count,
+    p.post_num,
+    u.id user_id,
+    u.username,
+    case u.enabled when 1 then 1 else 0 end user_enabled,
+    case u.account_locked when 1 then 1 else 0 end user_locked,
+    case u.account_expired when 1 then 1 else 0 end user_expired,
+    case coalesce(o.watch, 0) when 1 then 1 else 0 end user_watch,
+    case coalesce(o.premoderate) when 1 then 1 else 0 end user_premod
+    from post p
+    inner join discussion d
+    on p.discussion_id = d.id
+    inner join folder f
+    on d.folder_id = f.id
+    inner join user u
+    on p.user_id = u.id
+    left join user_options o
+    on u.id = o.user_id
+    where p.moderation_score > 0
+    and p.moderation_result != 0
+    and p.created_date > (now() - INTERVAL 30 DAY)
+    order by p.created_date desc
+    limit $page_start, $page_size;
+
+END //
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS get_moderation_queue;
 DELIMITER //
 CREATE PROCEDURE get_moderation_queue()

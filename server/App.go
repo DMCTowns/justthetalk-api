@@ -186,6 +186,7 @@ func (a *App) configureAdminRouter(router *mux.Router) {
 	adminRouter := router.PathPrefix("/admin").Subrouter().StrictSlash(false)
 
 	adminRouter.HandleFunc("/moderation/queue", adminHandler.GetModerationQueue).Methods(http.MethodGet, http.MethodOptions)
+	adminRouter.HandleFunc("/moderation/history", adminHandler.GetModerationHistory).Methods(http.MethodGet, http.MethodOptions)
 
 	adminRouter.HandleFunc("/discussion/{discussionId}/report", adminHandler.GetReportsByDiscussion).Methods(http.MethodGet, http.MethodOptions)
 	adminRouter.HandleFunc("/discussion/{discussionId}/comment", adminHandler.GetCommentsByDiscussion).Methods(http.MethodGet, http.MethodOptions)

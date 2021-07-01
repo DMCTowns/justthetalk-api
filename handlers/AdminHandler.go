@@ -46,6 +46,19 @@ func NewAdminHandler(userCache *businesslogic.UserCache, folderCache *businesslo
 
 }
 
+func (h *AdminHandler) GetModerationHistory(res http.ResponseWriter, req *http.Request) {
+	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		pageStart := utils.ExtractQueryInt("start", req)
+		pageSize := utils.ExtractQueryInt("size", req)
+
+		results := businesslogic.GetModerationHistory(pageStart, pageSize, h.folderCache, h.discussionCache, db)
+
+		return http.StatusOK, results, ""
+
+	})
+}
+
 func (h *AdminHandler) GetModerationQueue(res http.ResponseWriter, req *http.Request) {
 	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
