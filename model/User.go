@@ -174,3 +174,17 @@ type PasswordResetRequest struct {
 	IPAddress   string    `json:"ipAddress" gorm:"column:ip_address"`
 	Username    string    `json:"username" gorm:"username"`
 }
+
+type UserSearchResults struct {
+	ModelBase
+	LastLoginDate   time.Time `json:"lastLoginDate" gorm:"column:last_login_date"`
+	Username        string    `json:"username" gorm:"column:username"`
+	Email           string    `json:"email" gorm:"column:email"`
+	AccountExpired  bool      `json:"accountExpired" gorm:"column:account_expired"`
+	AccountLocked   bool      `json:"accountLocked" gorm:"column:account_locked"`
+	Enabled         bool      `json:"enabled" gorm:"column:enabled"`
+	IsAdmin         bool      `json:"isAdmin" gorm:"column:is_admin"`
+	IsPremoderate   bool      `json:"isPremoderate" gorm:"column:is_premoderate"`
+	IsWatch         bool      `json:"isWatch" gorm:"column:is_watch"`
+	IsEmailVerified bool      `json:"isEmailVerified" gorm:"column:email_verified"`
+}

@@ -39,6 +39,8 @@ func CreateLoginHistory(status string, user *model.User, ipAddress string, db *g
 		Status:      status,
 	}
 
+	db.Model(&model.User{}).Where("id = ?", user.Id).Update("last_login_date", "now()")
+
 	if result := db.Table("login_history").Create(&history); result.Error != nil {
 		log.Errorf("%v", result.Error)
 		panic(utils.ErrInternalError)

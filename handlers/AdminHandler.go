@@ -306,5 +306,24 @@ func (h *AdminHandler) UndeletePost(res http.ResponseWriter, req *http.Request) 
 		return http.StatusOK, post, ""
 
 	})
+}
 
+func (h *AdminHandler) SearchUsers(res http.ResponseWriter, req *http.Request) {
+	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		searchTerm := req.URL.Query().Get("term")
+		if len(searchTerm) > 0 && len(searchTerm) <= 20 {
+			results := businesslogic.SearchUsers(searchTerm, db)
+			return http.StatusOK, results, ""
+		} else {
+			filterKey := req.URL.Query().Get("filter")
+			if len(filterKey) > 0 {
+				results := businesslogic.FilterUsers(filterKey, db)
+				return http.StatusOK, results, ""
+			} else {
+				return http.StatusBadRequest, nil, "You must supply a search term"
+			}
+		}
+
+	})
 }

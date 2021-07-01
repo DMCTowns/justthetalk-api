@@ -117,3 +117,20 @@ func TestModerationQueue(t *testing.T) {
 		}
 	})
 }
+
+func TestSearchUsers(t *testing.T) {
+
+	connections.WithDatabase(60*time.Second, func(db *gorm.DB) {
+
+		results := SearchUsers("johnny", db)
+		if len(results) == 0 {
+			t.Error("No results")
+		}
+
+		results = SearchUsers("@@@", db)
+		if len(results) > 0 {
+			t.Error("Unexpected results")
+		}
+
+	})
+}

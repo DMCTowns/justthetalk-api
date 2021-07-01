@@ -16,6 +16,7 @@
 package businesslogic
 
 import (
+	"fmt"
 	"justthetalk/model"
 	"justthetalk/utils"
 
@@ -259,5 +260,42 @@ func EraseDiscussion(discussion *model.Discussion, discussionCache *DiscussionCa
 	}
 
 	discussionCache.Flush(discussion.Id)
+
+}
+
+func SearchUsers(searchTerm string, db *gorm.DB) []*model.UserSearchResults {
+
+	results := make([]*model.UserSearchResults, 0)
+
+	if result := db.Raw("call search_users(?)", fmt.Sprintf("%%%s%%", searchTerm)).Scan(&results); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	return results
+}
+
+func FilterUsers(filterKey string, db *gorm.DB) []*model.UserSearchResults {
+
+	results := make([]*model.UserSearchResults, 0)
+
+	command := ""
+	switch filterKey {
+	case "premod":
+		command = "search_users_premod"
+	case "watch":
+		command = "search_users_watch"
+	case "locked":
+		command = "search_users_locked"
+	case "recent":
+		command = "search_users_recent"
+	default:
+		panic(utils.ErrBadRequest)
+	}
+
+	if result := db.Raw(fmt.Sprintf("call %s", command)).Scan(&results); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	return results
 
 }
