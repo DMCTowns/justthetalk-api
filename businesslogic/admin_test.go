@@ -17,6 +17,7 @@ package businesslogic
 
 import (
 	"justthetalk/connections"
+	"justthetalk/model"
 	"testing"
 	"time"
 
@@ -46,9 +47,10 @@ func TestBlockUser(t *testing.T) {
 	folderCache := NewFolderCache()
 	discussionCache := NewDiscussionCache(folderCache)
 
-	user := userCache.Get(5540)
+	targetUser := userCache.Get(5540)
+	adminUser := userCache.Get(50)
 	discussion := discussionCache.UnsafeGet(discussionId)
-	blockedUsers := discussionCache.BlockUser(discussion, user)
+	blockedUsers := discussionCache.BlockOrUnblockUser(discussion, targetUser, true, adminUser)
 	if _, exists := blockedUsers[uint(5540)]; !exists {
 		t.Fail()
 	}
@@ -63,9 +65,10 @@ func TestUnblockUser(t *testing.T) {
 	folderCache := NewFolderCache()
 	discussionCache := NewDiscussionCache(folderCache)
 
-	user := userCache.Get(5540)
+	targetUser := userCache.Get(5540)
+	adminUser := userCache.Get(50)
 	discussion := discussionCache.UnsafeGet(discussionId)
-	blockedUsers := discussionCache.UnblockUser(discussion, user)
+	blockedUsers := discussionCache.BlockOrUnblockUser(discussion, targetUser, false, adminUser)
 	if _, exists := blockedUsers[uint(5540)]; exists {
 		t.Fail()
 	}
@@ -130,6 +133,32 @@ func TestSearchUsers(t *testing.T) {
 		results = SearchUsers("@@@", db)
 		if len(results) > 0 {
 			t.Error("Unexpected results")
+		}
+
+	})
+}
+
+func TestSetUserStatus(t *testing.T) {
+
+	connections.WithDatabase(60*time.Second, func(db *gorm.DB) {
+
+		userCache := NewUserCache()
+		targetUser := userCache.Get(5540)
+		adminUser := userCache.Get(50)
+
+		fieldMap := make(map[string]interface{})
+
+		var updated *model.User
+
+		fieldMap["isWatch"] = false
+		updated = SetUserStatus(targetUser, fieldMap, adminUser, userCache, db)
+		if updated.IsWatch {
+			t.Error("Unexpected: isWatch")
+		}
+		fieldMap["isWatch"] = true
+		updated = SetUserStatus(targetUser, fieldMap, adminUser, userCache, db)
+		if !updated.IsWatch {
+			t.Error("Unexpected: isWatch")
 		}
 
 	})

@@ -188,3 +188,30 @@ type UserSearchResults struct {
 	IsWatch         bool      `json:"isWatch" gorm:"column:is_watch"`
 	IsEmailVerified bool      `json:"isEmailVerified" gorm:"column:email_verified"`
 }
+
+type UserHistory struct {
+	Id          uint      `json:"id" gorm:"column:id;primaryKey"`
+	Version     int       `json:"version" gorm:"column:version"`
+	CreatedDate time.Time `json:"createdDate" gorm:"column:created_date"`
+	EventType   string    `json:"eventType" gorm:"column:event_type"`
+	EventData   string    `json:"eventData" gorm:"column:event_data"`
+	UserId      uint      `json:"userId" gorm:"column:user_id"`
+}
+
+const UserHistoryAdminPostDelete = "ADMINDELETE"
+const UserHistoryAdminPostUndelete = "ADMINUNDELETE"
+const UserHistoryAdminDiscussionBlocked = "BLOCK"
+const UserHistoryAdminDiscussionUnblocked = "UNBLOCK"
+const UserHistoryAdminAccountDeleteEnabled = "DELETE"
+const UserHistoryAdminAccountDeleteDisabled = "UNDELETE"
+const UserHistoryAdminPostModerated = "POST MODERATED"
+const UserHistoryUserPostReported = "POST REPORTED"
+const UserHistoryUserReportedPost = "REPORTED POST"
+const UserHistoryAdminSignup = "SIGNUP"
+const UserHistoryAdminSignupConfirmed = "SIGNUP CONFIRMED"
+const UserHistoryAdminAccountLockedEnabled = "LOCK"
+const UserHistoryAdminAccountLockedDisabled = "UNLOCK"
+const UserHistoryAdminPremodEnabled = "PREMOD"
+const UserHistoryAdminPremodDisabled = "UNPREMOD"
+const UserHistoryAdminWatchDisabled = "UNWATCH"
+const UserHistoryAdminWatchEnabled = "WATCH"

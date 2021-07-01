@@ -318,7 +318,7 @@ func (h *UserHandler) CreateReport(res http.ResponseWriter, req *http.Request) {
 
 		reportData.IPAddress = strings.Split(req.RemoteAddr, ":")[0]
 
-		businesslogic.CreateReport(&reportData, db)
+		businesslogic.CreateReport(&reportData, h.userCache, db)
 
 		return http.StatusOK, nil, "Report submitted"
 

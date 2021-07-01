@@ -47,27 +47,27 @@ func mapBlockedUsers(blockedUsersList []*model.BlockedDiscussionUser) map[uint]*
 
 }
 
-func BlockUser(discussion *model.Discussion, user *model.User, db *gorm.DB) map[uint]*model.BlockedDiscussionUser {
+func BlockUnblockUser(discussion *model.Discussion, targetUser *model.User, blockNotUnblock bool, adminUser *model.User, db *gorm.DB) map[uint]*model.BlockedDiscussionUser {
+
+	state := 0
+	eventType := model.UserHistoryAdminDiscussionUnblocked
+	if blockNotUnblock {
+		state = 1
+		eventType = model.UserHistoryAdminDiscussionBlocked
+	}
 
 	var blockedUsersList []*model.BlockedDiscussionUser
-	if result := db.Raw("call block_discussion_user(?, ?, ?)", discussion.Id, user.Id, 1).Scan(&blockedUsersList); result.Error != nil {
+	if result := db.Raw("call block_discussion_user(?, ?, ?)", discussion.Id, targetUser.Id, state).Scan(&blockedUsersList); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
+
+	CreateUserHistory(eventType, fmt.Sprintf("DiscussionId: %d, Actioned by: %s", discussion.Id, adminUser.Username), targetUser, db)
+
 	return mapBlockedUsers(blockedUsersList)
 
 }
 
-func UnblockUser(discussion *model.Discussion, user *model.User, db *gorm.DB) map[uint]*model.BlockedDiscussionUser {
-
-	var blockedUsersList []*model.BlockedDiscussionUser
-	if result := db.Raw("call block_discussion_user(?, ?, ?)", discussion.Id, user.Id, 0).Scan(&blockedUsersList); result.Error != nil {
-		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-	}
-	return mapBlockedUsers(blockedUsersList)
-
-}
-
-func AdminDeleteNoUndeletePost(postId uint, folder *model.Folder, discussion *model.Discussion, deleteNotUndelete bool, db *gorm.DB) *model.Post {
+func AdminDeleteNoUndeletePost(postId uint, folder *model.Folder, discussion *model.Discussion, deleteNotUndelete bool, adminUser *model.User, userCache *UserCache, db *gorm.DB) *model.Post {
 
 	var post model.Post
 
@@ -76,9 +76,19 @@ func AdminDeleteNoUndeletePost(postId uint, folder *model.Folder, discussion *mo
 		postStatus = model.PostStatusOK
 	}
 
+	// TODO put this in a transaction
 	if result := db.Raw("call set_post_status(?, ?, ?, ?)", discussion.Id, postId, postStatus, 0).First(&post); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
+
+	targetUser := userCache.Get(post.CreatedByUserId)
+	var eventType string
+	if deleteNotUndelete {
+		eventType = model.UserHistoryAdminPostDelete
+	} else {
+		eventType = model.UserHistoryAdminPostUndelete
+	}
+	CreateUserHistory(eventType, fmt.Sprintf("Actioned by: %s", adminUser.Username), targetUser, db)
 
 	post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
 	post.Url = utils.UrlForPost(folder, discussion, &post)
@@ -169,7 +179,7 @@ func GetCommentsByDiscussion(discussion *model.Discussion, db *gorm.DB) []*model
 
 }
 
-func CreateComment(comment *model.ModeratorComment, folder *model.Folder, discussion *model.Discussion, post *model.Post, user *model.User, db *gorm.DB) ([]*model.ModeratorComment, *model.Post) {
+func CreateComment(comment *model.ModeratorComment, folder *model.Folder, discussion *model.Discussion, post *model.Post, user *model.User, userCache *UserCache, db *gorm.DB) ([]*model.ModeratorComment, *model.Post) {
 
 	results := make([]*model.ModeratorComment, 0)
 	if result := db.Raw("call create_admin_coment(?, ?, ?, ?)", post.Id, user.Id, comment.Body, comment.Vote).Scan(&results); result.Error != nil {
@@ -188,11 +198,17 @@ func CreateComment(comment *model.ModeratorComment, folder *model.Folder, discus
 
 	if utils.Abs(totalVote) >= moderationThreshold {
 
+		var result string
 		if totalVote < 0 {
 			post.Status = model.PostStatusDeletedByAdmin
+			result = "DELETE"
 		} else {
 			post.Status = model.PostStatusOK
+			result = "KEEP"
 		}
+
+		targetUser := userCache.Get(post.CreatedByUserId)
+		CreateUserHistory(model.UserHistoryAdminPostModerated, fmt.Sprintf("PostId: %d, %s", post.Id, result), targetUser, db)
 
 		var post model.Post
 		if result := db.Raw("call set_post_status(?, ?, ?, ?)", discussion.Id, post.Id, post.Status, totalVote).First(&post); result.Error != nil {
@@ -297,5 +313,72 @@ func FilterUsers(filterKey string, db *gorm.DB) []*model.UserSearchResults {
 	}
 
 	return results
+
+}
+
+func SetUserStatus(targetUser *model.User, fieldMap map[string]interface{}, adminUser *model.User, userCache *UserCache, db *gorm.DB) *model.User {
+
+	db.Transaction(func(tx *gorm.DB) error {
+
+		var result *gorm.DB
+		for k, v := range fieldMap {
+
+			var eventType string
+			eventData := fmt.Sprintf("Actioned by: %s", adminUser.Username)
+
+			switch k {
+			case "enabled":
+				result = tx.Table("user").Where("user_id = ?", targetUser.Id).Update("enabled", v)
+				if v.(bool) {
+					eventType = model.UserHistoryAdminAccountDeleteEnabled
+				} else {
+					eventType = model.UserHistoryAdminAccountDeleteDisabled
+				}
+
+			case "accountLocked":
+				result = tx.Table("user").Where("user_id = ?", targetUser.Id).Update("account_locked", v)
+				if v.(bool) {
+					eventType = model.UserHistoryAdminAccountLockedEnabled
+				} else {
+					eventType = model.UserHistoryAdminAccountLockedDisabled
+				}
+
+			case "isPremoderate":
+				result = tx.Table("user_options").Where("user_id = ?", targetUser.Id).Update("premoderate", v)
+				if v.(bool) {
+					eventType = model.UserHistoryAdminPremodEnabled
+				} else {
+					eventType = model.UserHistoryAdminPremodDisabled
+				}
+
+			case "isWatch":
+				result = tx.Table("user_options").Where("user_id = ?", targetUser.Id).Update("watch", v)
+				if v.(bool) {
+					eventType = model.UserHistoryAdminWatchEnabled
+				} else {
+					eventType = model.UserHistoryAdminWatchDisabled
+				}
+
+			}
+
+			if result.Error != nil {
+				break
+			}
+
+			CreateUserHistory(eventType, eventData, targetUser, tx)
+
+		}
+
+		if result.Error != nil {
+			return result.Error
+		} else {
+			return nil
+		}
+
+	})
+
+	userCache.Flush(targetUser)
+
+	return userCache.Get(targetUser.Id)
 
 }

@@ -144,7 +144,7 @@ func (h *AdminHandler) CreateComment(res http.ResponseWriter, req *http.Request)
 			panic(utils.ErrBadRequest)
 		}
 
-		results, post := businesslogic.CreateComment(&comment, folder, discussion, post, user, db)
+		results, post := businesslogic.CreateComment(&comment, folder, discussion, post, user, h.userCache, db)
 
 		h.postProcessor.PublishPost(post)
 
@@ -242,12 +242,12 @@ func (h *AdminHandler) BlockUserDiscussion(res http.ResponseWriter, req *http.Re
 	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
 		discussionId := utils.ExtractVarInt("discussionId", req)
-		blockUserId := utils.ExtractVarInt("userId", req)
+		targetUserId := utils.ExtractVarInt("userId", req)
 
 		discussion := h.discussionCache.Get(discussionId, user)
-		blockUser := h.userCache.Get(blockUserId)
+		targetUser := h.userCache.Get(targetUserId)
 
-		blockedUsers := h.discussionCache.BlockUser(discussion, blockUser)
+		blockedUsers := h.discussionCache.BlockOrUnblockUser(discussion, targetUser, true, user)
 
 		return http.StatusOK, blockedUsers, ""
 
@@ -258,12 +258,12 @@ func (h *AdminHandler) UnblockUserDiscussion(res http.ResponseWriter, req *http.
 	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
 		discussionId := utils.ExtractVarInt("discussionId", req)
-		unblockUserId := utils.ExtractVarInt("userId", req)
+		targetUserId := utils.ExtractVarInt("userId", req)
 
 		discussion := h.discussionCache.Get(discussionId, user)
-		unblockUser := h.userCache.Get(unblockUserId)
+		targetUser := h.userCache.Get(targetUserId)
 
-		blockedUsers := h.discussionCache.UnblockUser(discussion, unblockUser)
+		blockedUsers := h.discussionCache.BlockOrUnblockUser(discussion, targetUser, false, user)
 
 		return http.StatusOK, blockedUsers, ""
 
@@ -279,7 +279,7 @@ func (h *AdminHandler) DeletePost(res http.ResponseWriter, req *http.Request) {
 		discussion := h.discussionCache.Get(discussionId, user)
 		folder := h.folderCache.Get(discussion.FolderId, user)
 
-		post := businesslogic.AdminDeleteNoUndeletePost(postId, folder, discussion, true, db)
+		post := businesslogic.AdminDeleteNoUndeletePost(postId, folder, discussion, true, user, h.userCache, db)
 
 		post.Markup = h.postFormatter.ApplyPostFormatting(post.Text, discussion)
 		h.postProcessor.PublishPost(post)
@@ -298,7 +298,7 @@ func (h *AdminHandler) UndeletePost(res http.ResponseWriter, req *http.Request) 
 		discussion := h.discussionCache.Get(discussionId, user)
 		folder := h.folderCache.Get(discussion.FolderId, user)
 
-		post := businesslogic.AdminDeleteNoUndeletePost(postId, folder, discussion, false, db)
+		post := businesslogic.AdminDeleteNoUndeletePost(postId, folder, discussion, false, user, h.userCache, db)
 
 		post.Markup = h.postFormatter.ApplyPostFormatting(post.Text, discussion)
 		h.postProcessor.PublishPost(post)
@@ -324,6 +324,28 @@ func (h *AdminHandler) SearchUsers(res http.ResponseWriter, req *http.Request) {
 				return http.StatusBadRequest, nil, "You must supply a search term"
 			}
 		}
+
+	})
+}
+
+func (h *AdminHandler) SetUserStatus(res http.ResponseWriter, req *http.Request) {
+	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		userId := utils.ExtractVarInt("userId", req)
+
+		fieldMap := make(map[string]interface{})
+		if err := json.NewDecoder(req.Body).Decode(&fieldMap); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+
+		targetUser := h.userCache.Get(userId)
+		if targetUser == nil {
+			panic(utils.ErrNotFound)
+		}
+
+		updated := businesslogic.SetUserStatus(targetUser, fieldMap, user, h.userCache, db)
+
+		return http.StatusOK, updated, ""
 
 	})
 }

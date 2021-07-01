@@ -39,7 +39,7 @@ func CreateLoginHistory(status string, user *model.User, ipAddress string, db *g
 		Status:      status,
 	}
 
-	db.Model(&model.User{}).Where("id = ?", user.Id).Update("last_login_date", "now()")
+	db.Table("user").Where("id = ?", user.Id).Update("last_login_date", time.Now())
 
 	if result := db.Table("login_history").Create(&history); result.Error != nil {
 		log.Errorf("%v", result.Error)
@@ -381,11 +381,13 @@ func CreateUser(credentials *model.LoginCredentials, ipAddress string, db *gorm.
 	passwordHashBytes := sha256.Sum256([]byte(credentials.Password))
 	passwordHash := fmt.Sprintf("%x", passwordHashBytes)
 
+	// TODO - put this in a transaction
 	var user model.User
 	if result := db.Raw("call create_user(?, ?, ?)", credentials.Email, username, passwordHash).Take(&user); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
+	CreateUserHistory(model.UserHistoryAdminSignup, ipAddress, &user, db)
 	CreateLoginHistory("new", &user, ipAddress, db)
 
 	CreateNewSignupConfirmation(&user, db)
@@ -535,6 +537,7 @@ func ValidateSignupConfirmationKey(key string, ipAddress string, userCache *User
 		panic(utils.ErrExpired)
 	}
 
+	// TODO - put this in a transaction
 	var user model.User
 	if result := db.Raw("call accept_signup_confirmation_request(?, ?)", request.Id, ipAddress).Take(&request); result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -544,6 +547,9 @@ func ValidateSignupConfirmationKey(key string, ipAddress string, userCache *User
 	}
 
 	updatedUser := userCache.Reload(user.Id)
+
+	CreateUserHistory(model.UserHistoryAdminSignupConfirmed, ipAddress, &user, db)
+	CreateLoginHistory("new", &user, ipAddress, db)
 
 	return updatedUser
 
@@ -611,10 +617,21 @@ func DeleteDiscussionBookmark(user *model.User, discussion *model.Discussion, us
 
 }
 
-func CreateReport(reportData *model.PostReport, db *gorm.DB) {
+func CreateReport(reportData *model.PostReport, userCache *UserCache, db *gorm.DB) {
 
+	// TODO put all in transaction
 	if result := db.Exec("call create_report(?, ?, ?, ?, ?, ?)", reportData.PostId, reportData.ReporterUserId, reportData.ReporterName, reportData.ReporterEmail, reportData.Body, reportData.IPAddress); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	post := GetPost(reportData.PostId, db)
+	targetUser := userCache.Get(post.CreatedByUserId)
+
+	CreateUserHistory(model.UserHistoryUserPostReported, fmt.Sprintf("PostId: %d, Reported by: %s(%s)", reportData.PostId, reportData.ReporterName, reportData.ReporterEmail), targetUser, db)
+
+	if reportData.ReporterUserId > 0 {
+		reportingUser := userCache.Get(reportData.ReporterUserId)
+		CreateUserHistory(model.UserHistoryUserReportedPost, fmt.Sprintf("PostId: %d", reportData.PostId), reportingUser, db)
 	}
 
 	SendEmail(reportData.ReporterEmail, reportData, ReportSubmittedTemplate)
@@ -670,5 +687,21 @@ func CheckSubscriptions(user *model.User, db *gorm.DB) []*model.FrontPageEntry {
 	}
 
 	return unreadSubs
+
+}
+
+func CreateUserHistory(eventType string, eventData string, targetUser *model.User, db *gorm.DB) {
+
+	history := model.UserHistory{
+		Version:     1,
+		CreatedDate: time.Now(),
+		EventType:   eventType,
+		EventData:   eventData,
+		UserId:      targetUser.Id,
+	}
+
+	if result := db.Table("user_history").Create(&history); result.Error != nil {
+		panic(result.Error)
+	}
 
 }

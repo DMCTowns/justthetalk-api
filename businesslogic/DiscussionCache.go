@@ -162,24 +162,12 @@ func (cache *DiscussionCache) BlockedUsers(discussion *model.Discussion) map[uin
 
 }
 
-func (cache *DiscussionCache) BlockUser(discussion *model.Discussion, user *model.User) map[uint]*model.BlockedDiscussionUser {
-	return cache.BlockOrUnblockUser(discussion, user, true)
-}
-
-func (cache *DiscussionCache) UnblockUser(discussion *model.Discussion, user *model.User) map[uint]*model.BlockedDiscussionUser {
-	return cache.BlockOrUnblockUser(discussion, user, false)
-}
-
-func (cache *DiscussionCache) BlockOrUnblockUser(discussion *model.Discussion, user *model.User, blockNotUnblock bool) map[uint]*model.BlockedDiscussionUser {
+func (cache *DiscussionCache) BlockOrUnblockUser(discussion *model.Discussion, targetUser *model.User, blockNotUnblock bool, adminUser *model.User) map[uint]*model.BlockedDiscussionUser {
 
 	var blockedUserMap map[uint]*model.BlockedDiscussionUser
 
 	connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
-		if blockNotUnblock {
-			blockedUserMap = BlockUser(discussion, user, db)
-		} else {
-			blockedUserMap = UnblockUser(discussion, user, db)
-		}
+		blockedUserMap = BlockUnblockUser(discussion, targetUser, blockNotUnblock, adminUser, db)
 	})
 
 	key := "B" + strconv.Itoa(int(discussion.Id))
