@@ -349,3 +349,20 @@ func (h *AdminHandler) SetUserStatus(res http.ResponseWriter, req *http.Request)
 
 	})
 }
+
+func (h *AdminHandler) GetUserHistory(res http.ResponseWriter, req *http.Request) {
+	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		userId := utils.ExtractVarInt("userId", req)
+
+		targetUser := h.userCache.Get(userId)
+		if targetUser == nil {
+			panic(utils.ErrNotFound)
+		}
+
+		results := businesslogic.GetUserHistory(targetUser, db)
+
+		return http.StatusOK, results, ""
+
+	})
+}

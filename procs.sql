@@ -2543,6 +2543,7 @@ BEGIN
     on u.id = a.user_id
     where not last_login_date is null
     and o.premoderate = 1
+    and u.enabled = 1
     order by u.username;
 
 END //
@@ -2575,6 +2576,7 @@ BEGIN
     on u.id = a.user_id
     where not last_login_date is null
     and o.watch = 1
+    and u.enabled = 1
     order by u.username;
 
 END //
@@ -2607,6 +2609,7 @@ BEGIN
     on u.id = a.user_id
     where not last_login_date is null
     and u.account_locked = 1
+    and u.enabled = 1
     order by u.username;
 
 END //
@@ -2643,3 +2646,21 @@ BEGIN
 
 END //
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_user_history;
+DELIMITER //
+CREATE PROCEDURE get_user_history(IN $user_id bigint)
+BEGIN
+
+    select *
+    from user_history
+    where user_id = $user_id
+    and created_date > date_sub(now(), interval 90 day)
+    order by created_date desc;
+
+
+END //
+DELIMITER ;
+
+-- , IN $page_start int, IN $page_size int
+-- limit $page_start, $page_size;

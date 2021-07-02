@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"justthetalk/model"
 	"justthetalk/utils"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -328,7 +329,7 @@ func SetUserStatus(targetUser *model.User, fieldMap map[string]interface{}, admi
 
 			switch k {
 			case "enabled":
-				result = tx.Table("user").Where("user_id = ?", targetUser.Id).Update("enabled", v)
+				result = tx.Table("user").Where("id = ?", targetUser.Id).Update("enabled", v)
 				if v.(bool) {
 					eventType = model.UserHistoryAdminAccountDeleteEnabled
 				} else {
@@ -336,7 +337,7 @@ func SetUserStatus(targetUser *model.User, fieldMap map[string]interface{}, admi
 				}
 
 			case "accountLocked":
-				result = tx.Table("user").Where("user_id = ?", targetUser.Id).Update("account_locked", v)
+				result = tx.Table("user").Where("id = ?", targetUser.Id).Update("account_locked", v)
 				if v.(bool) {
 					eventType = model.UserHistoryAdminAccountLockedEnabled
 				} else {
@@ -365,6 +366,11 @@ func SetUserStatus(targetUser *model.User, fieldMap map[string]interface{}, admi
 				break
 			}
 
+			result = tx.Table("user").Where("id = ?", targetUser.Id).Update("last_updated", time.Now())
+			if result.Error != nil {
+				break
+			}
+
 			CreateUserHistory(eventType, eventData, targetUser, tx)
 
 		}
@@ -380,5 +386,16 @@ func SetUserStatus(targetUser *model.User, fieldMap map[string]interface{}, admi
 	userCache.Flush(targetUser)
 
 	return userCache.Get(targetUser.Id)
+
+}
+
+func GetUserHistory(targetUser *model.User, db *gorm.DB) []*model.UserHistory {
+
+	results := make([]*model.UserHistory, 0)
+	if result := db.Raw("call get_user_history(?)", targetUser.Id).Scan(&results); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	return results
 
 }
