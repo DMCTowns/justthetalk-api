@@ -189,6 +189,8 @@ func (a *App) configureAdminRouter(router *mux.Router) {
 	adminRouter.HandleFunc("/user/{userId}/status", adminHandler.SetUserStatus).Methods(http.MethodPut, http.MethodOptions)
 	adminRouter.HandleFunc("/user/{userId}/history", adminHandler.GetUserHistory).Methods(http.MethodGet, http.MethodOptions)
 
+	adminRouter.HandleFunc("/users/discussion/block", adminHandler.GetUserDiscussionBlocks).Methods(http.MethodGet, http.MethodOptions)
+
 	adminRouter.HandleFunc("/moderation/queue", adminHandler.GetModerationQueue).Methods(http.MethodGet, http.MethodOptions)
 	adminRouter.HandleFunc("/moderation/history", adminHandler.GetModerationHistory).Methods(http.MethodGet, http.MethodOptions)
 

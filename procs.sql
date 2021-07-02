@@ -2662,5 +2662,27 @@ BEGIN
 END //
 DELIMITER ;
 
--- , IN $page_start int, IN $page_size int
--- limit $page_start, $page_size;
+DROP PROCEDURE IF EXISTS get_user_discussion_blocks;
+DELIMITER //
+CREATE PROCEDURE get_user_discussion_blocks()
+BEGIN
+
+    select du.id,
+    d.id discussion_id,
+    d.title discussion_name,
+    f.id folder_id,
+    f.folder_key,
+    f.description folder_name,
+    u.id user_id,
+    u.username
+    from discussion_user du
+    inner join discussion d
+    on du.discussion_id = d.id
+    inner join folder f
+    on d.folder_id = f.id
+    inner join user u
+    on du.user_id = u.id
+    order by u.username;
+
+END //
+DELIMITER ;

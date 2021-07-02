@@ -215,3 +215,15 @@ const UserHistoryAdminPremodEnabled = "PREMOD"
 const UserHistoryAdminPremodDisabled = "UNPREMOD"
 const UserHistoryAdminWatchDisabled = "UNWATCH"
 const UserHistoryAdminWatchEnabled = "WATCH"
+
+type DiscussionBlock struct {
+	Id              uint   `json:"id" gorm:"column:id;primaryKey"`
+	DiscussionId    uint   `json:"discussionId" gorm:"column:discussion_id"`
+	DiscussionTitle string `json:"discussionTitle" gorm:"column:discussion_name"`
+	FolderId        uint   `json:"folderId" gorm:"column:folder_id"`
+	FolderKey       string `json:"folderKey" gorm:"column:folder_key"`
+	FolderTitle     string `json:"folderTitle" gorm:"column:folder_name"`
+	UserId          uint   `json:"userId" gorm:"column:user_id"`
+	Username        string `json:"username" gorm:"username"`
+	Url             string `json:"url" gorm:"-"`
+}

@@ -21,6 +21,7 @@ import (
 	"justthetalk/utils"
 	"time"
 
+	"github.com/gosimple/slug"
 	"gorm.io/gorm"
 )
 
@@ -394,6 +395,22 @@ func GetUserHistory(targetUser *model.User, db *gorm.DB) []*model.UserHistory {
 	results := make([]*model.UserHistory, 0)
 	if result := db.Raw("call get_user_history(?)", targetUser.Id).Scan(&results); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	return results
+
+}
+
+func GetUserDiscussionBlocks(db *gorm.DB) []*model.DiscussionBlock {
+
+	results := make([]*model.DiscussionBlock, 0)
+	if result := db.Raw("call get_user_discussion_blocks()").Scan(&results); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	for _, item := range results {
+		slugText := slug.Make(item.DiscussionTitle)
+		item.Url = fmt.Sprintf("/%s/%d/%s/1", item.FolderKey, item.DiscussionId, slugText)
 	}
 
 	return results

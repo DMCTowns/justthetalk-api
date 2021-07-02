@@ -366,3 +366,12 @@ func (h *AdminHandler) GetUserHistory(res http.ResponseWriter, req *http.Request
 
 	})
 }
+
+func (h *AdminHandler) GetUserDiscussionBlocks(res http.ResponseWriter, req *http.Request) {
+	utils.AdminOnlyHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		results := businesslogic.GetUserDiscussionBlocks(db)
+		return http.StatusOK, results, ""
+
+	})
+}
