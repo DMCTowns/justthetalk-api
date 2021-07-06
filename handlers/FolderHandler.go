@@ -264,17 +264,6 @@ func (h *FolderHandler) CreatePost(res http.ResponseWriter, req *http.Request) {
 
 		posts := businesslogic.GetPosts(folder, discussion, user, int(returnPostsFromPostNum), 20, db)
 
-		// TODO remove this or fix it
-		// lastPost := posts[len(posts)-1]
-		// nextBookmark := &model.UserDiscussionBookmark{
-		// 	DiscussionId:  discussion.Id,
-		// 	UserId:        user.Id,
-		// 	LastPostId:    lastPost.Id,
-		// 	LastPostCount: lastPost.PostNum,
-		// 	LastPostDate:  lastPost.CreatedDate,
-		// }
-		// h.bookmarkProcessor.Enqueue(nextBookmark)
-
 		return http.StatusOK, posts, ""
 
 	})
