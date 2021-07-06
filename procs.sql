@@ -2699,3 +2699,26 @@ BEGIN
 
 END //
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS rebuild_front_page_entry;
+DELIMITER //
+CREATE PROCEDURE rebuild_front_page_entry()
+BEGIN
+
+    start transaction;
+
+    delete from front_page_entry;
+
+    insert into front_page_entry (version, discussion_id, discussion_name, folder_id, folder_key, folder_name, last_post, last_post_id, post_count, admin_only)
+    select 0, d.id, d.title, d.folder_id, f.folder_key, f.description, d.last_post, d.last_post_id , d.post_count, case when f.type  = 3 then 1 else 0 end
+    from discussion  d
+    inner join folder f
+    on d.folder_id = f.id
+    where f.type  in (0, 3)
+    and d.status = 0
+    order by last_post;
+
+    commit work;
+
+END //
+DELIMITER ;
