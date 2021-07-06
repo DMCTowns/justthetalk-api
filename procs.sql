@@ -1898,6 +1898,7 @@ BEGIN
     on u.id = o.user_id
     inner join moderation_queue mq
     on p.id = mq.post_id
+    where p.status in (0, 1, 3, 4)
     order by p.created_date;
 
 END //
