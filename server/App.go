@@ -39,8 +39,13 @@ var once sync.Once
 
 var (
 	httpDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "myapp_http_duration_seconds",
+		Name: "justthetalk_http_duration_seconds",
 		Help: "Duration of HTTP requests.",
+	}, []string{"path"})
+
+	httpCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "justthetalk_http_count",
+		Help: "Count of HTTP requests",
 	}, []string{"path"})
 )
 
@@ -56,10 +61,11 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 
 		route := mux.CurrentRoute(r)
 		path, _ := route.GetPathTemplate()
+
+		httpCount.WithLabelValues(path).Inc()
+
 		timer := prometheus.NewTimer(httpDuration.WithLabelValues(path))
-
 		next.ServeHTTP(w, r)
-
 		timer.ObserveDuration()
 
 	})

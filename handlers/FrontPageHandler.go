@@ -21,7 +21,16 @@ import (
 	"justthetalk/utils"
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gorm.io/gorm"
+)
+
+var (
+	frontPageCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "justthetalk_front_page_count",
+		Help: "Count of front page requests",
+	}, []string{"authenticated"})
 )
 
 type FrontPageHandler struct {
@@ -51,6 +60,12 @@ func (h *FrontPageHandler) GetFrontPage(res http.ResponseWriter, req *http.Reque
 		viewType := utils.ExtractVarString("viewType", req)
 
 		discussions := businesslogic.GetFrontPage(user, viewType, pageSize, pageStart, h.userCache, h.discussionCache, db)
+
+		if user == nil {
+			frontPageCount.WithLabelValues("anon").Inc()
+		} else {
+			frontPageCount.WithLabelValues("auth").Inc()
+		}
 
 		return http.StatusOK, discussions, ""
 

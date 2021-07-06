@@ -23,7 +23,21 @@ import (
 	"net/http"
 
 	"github.com/jinzhu/copier"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gorm.io/gorm"
+)
+
+var (
+	postCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "justthetalk_post_count",
+		Help: "Count of new posts",
+	}, []string{"folder"})
+
+	discussionCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "justthetalk_discussion_count",
+		Help: "Count of new discussions",
+	}, []string{"folder"})
 )
 
 type FolderHandler struct {
@@ -125,6 +139,8 @@ func (h *FolderHandler) CreateDiscussion(res http.ResponseWriter, req *http.Requ
 		}
 
 		created := businesslogic.CreateDiscussion(folder, &discussion, user, h.userCache, h.discussionCache, db)
+
+		discussionCount.WithLabelValues(folder.Key).Inc()
 
 		return http.StatusOK, created, ""
 
@@ -263,6 +279,8 @@ func (h *FolderHandler) CreatePost(res http.ResponseWriter, req *http.Request) {
 		}
 
 		posts := businesslogic.GetPosts(folder, discussion, user, int(returnPostsFromPostNum), 20, db)
+
+		postCount.WithLabelValues(folder.Key).Inc()
 
 		return http.StatusOK, posts, ""
 
