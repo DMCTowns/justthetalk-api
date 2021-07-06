@@ -29,14 +29,41 @@ import (
 	"justthetalk/middleware"
 
 	"sync"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var once sync.Once
+
+var (
+	httpDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "myapp_http_duration_seconds",
+		Help: "Duration of HTTP requests.",
+	}, []string{"path"})
+)
 
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, `{"alive": true}`)
+}
+
+func prometheusMiddleware(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		route := mux.CurrentRoute(r)
+		path, _ := route.GetPathTemplate()
+		timer := prometheus.NewTimer(httpDuration.WithLabelValues(path))
+
+		next.ServeHTTP(w, r)
+
+		timer.ObserveDuration()
+
+	})
+
 }
 
 type App struct {
@@ -76,7 +103,7 @@ func (a *App) configureRouter() *mux.Router {
 	sessionMiddleware := middleware.NewSessionMiddleware(a.userCache)
 
 	router := mux.NewRouter().StrictSlash(false)
-	router.Use(databaseMiddleware.Middleware, sessionMiddleware.Middleware)
+	router.Use(databaseMiddleware.Middleware, sessionMiddleware.Middleware, prometheusMiddleware)
 
 	a.configureFolderRouter(router)
 	a.configureFrontPageRouter(router)
@@ -85,6 +112,8 @@ func (a *App) configureRouter() *mux.Router {
 	a.configureAdminRouter(router)
 
 	router.HandleFunc("/health", HealthCheckHandler)
+	router.Path("/metrics").Handler(promhttp.Handler())
+	//router.HandleFunc("/metrics", promhttp.Handler())
 
 	websocketHandler := handlers.NewWebsockerHandler(a.userCache)
 	router.HandleFunc("/ws", websocketHandler.ServeHTTP)
