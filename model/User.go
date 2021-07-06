@@ -48,7 +48,6 @@ type UserDiscussionBookmark struct {
 	LastPostCount int64     `json:"lastPostCount" gorm:"column:last_post_count"`
 	LastPostDate  time.Time `json:"lastPostDate" gorm:"column:last_post_date"`
 }
-
 type UserFolderSubscription struct {
 	ModelBase
 	UserId       uint      `json:"userId" gorm:"column:user_id"`

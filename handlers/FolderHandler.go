@@ -27,21 +27,19 @@ import (
 )
 
 type FolderHandler struct {
-	userCache         *businesslogic.UserCache
-	folderCache       *businesslogic.FolderCache
-	discussionCache   *businesslogic.DiscussionCache
-	bookmarkProcessor *businesslogic.BookmarkProcessor
-	postProcessor     *businesslogic.PostProcessor
+	userCache       *businesslogic.UserCache
+	folderCache     *businesslogic.FolderCache
+	discussionCache *businesslogic.DiscussionCache
+	postProcessor   *businesslogic.PostProcessor
 }
 
-func NewFolderHandler(userCache *businesslogic.UserCache, folderCache *businesslogic.FolderCache, discussionCache *businesslogic.DiscussionCache, bookmarkCache *businesslogic.BookmarkProcessor, postProcessor *businesslogic.PostProcessor) *FolderHandler {
+func NewFolderHandler(userCache *businesslogic.UserCache, folderCache *businesslogic.FolderCache, discussionCache *businesslogic.DiscussionCache, postProcessor *businesslogic.PostProcessor) *FolderHandler {
 
 	return &FolderHandler{
-		userCache:         userCache,
-		folderCache:       folderCache,
-		discussionCache:   discussionCache,
-		bookmarkProcessor: bookmarkCache,
-		postProcessor:     postProcessor,
+		userCache:       userCache,
+		folderCache:     folderCache,
+		discussionCache: discussionCache,
+		postProcessor:   postProcessor,
 	}
 
 }
@@ -235,20 +233,6 @@ func (h *FolderHandler) GetPosts(res http.ResponseWriter, req *http.Request) {
 
 		posts := businesslogic.GetPosts(folder, discussion, user, pageStart, pageSize, db)
 
-		if user != nil && len(posts) > 0 {
-			lastPost := posts[len(posts)-1]
-			if lastBookmark == nil || lastPost.PostNum > lastBookmark.LastPostCount {
-				nextBookmark := &model.UserDiscussionBookmark{
-					DiscussionId:  lastPost.DiscussionId,
-					UserId:        user.Id,
-					LastPostId:    lastPost.Id,
-					LastPostCount: lastPost.PostNum,
-					LastPostDate:  lastPost.CreatedDate,
-				}
-				h.bookmarkProcessor.Enqueue(nextBookmark)
-			}
-		}
-
 		return http.StatusOK, posts, ""
 
 	})
@@ -280,15 +264,16 @@ func (h *FolderHandler) CreatePost(res http.ResponseWriter, req *http.Request) {
 
 		posts := businesslogic.GetPosts(folder, discussion, user, int(returnPostsFromPostNum), 20, db)
 
-		lastPost := posts[len(posts)-1]
-		nextBookmark := &model.UserDiscussionBookmark{
-			DiscussionId:  discussion.Id,
-			UserId:        user.Id,
-			LastPostId:    lastPost.Id,
-			LastPostCount: lastPost.PostNum,
-			LastPostDate:  lastPost.CreatedDate,
-		}
-		h.bookmarkProcessor.Enqueue(nextBookmark)
+		// TODO remove this or fix it
+		// lastPost := posts[len(posts)-1]
+		// nextBookmark := &model.UserDiscussionBookmark{
+		// 	DiscussionId:  discussion.Id,
+		// 	UserId:        user.Id,
+		// 	LastPostId:    lastPost.Id,
+		// 	LastPostCount: lastPost.PostNum,
+		// 	LastPostDate:  lastPost.CreatedDate,
+		// }
+		// h.bookmarkProcessor.Enqueue(nextBookmark)
 
 		return http.StatusOK, posts, ""
 

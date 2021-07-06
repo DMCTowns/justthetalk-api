@@ -58,6 +58,8 @@ update user set email_verified = 1 where id > 0;
 alter table password_reset add column created_date datetime not null default UTC_TIMESTAMP();
 alter table password_reset add column ip_address varchar(15);
 create unique index idx_password_reset_reset_key on password_reset(reset_key);
+
+alter table user_discussion add column created_date datetime not null default UTC_TIMESTAMP();
 ---------------------------------------------
 
 DROP PROCEDURE IF EXISTS get_folders;
@@ -911,6 +913,7 @@ BEGIN
     if $bookmark_id is null then
 
         insert into user_discussion (
+        created_date,
         version,
         user_id,
         discussion_id,
@@ -919,6 +922,7 @@ BEGIN
         last_post_count,
         last_post_id)
         values (
+        now(),
         0,
         $user_id,
         $discussion_id,
@@ -943,6 +947,12 @@ BEGIN
         end if;
 
     end if;
+
+    select ud.*
+    from user_discussion ud
+    where ud.user_id = $user_id
+    and ud.discussion_id = $discussion_id;
+
 
 END //
 DELIMITER ;
@@ -1555,6 +1565,8 @@ BEGIN
     SELECT ROW_COUNT() into $rows_affected;
 
     if $rows_affected = 1 then
+
+        delete from moderation_queue where post_id = $post_id;
 
         select p.id,
         p.version,

@@ -40,17 +40,13 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type App struct {
-	router *mux.Router
-
+	router           *mux.Router
 	mostActiveWorker *businesslogic.MostActiveWorker
-
-	postProcessor *businesslogic.PostProcessor
-
-	userCache         *businesslogic.UserCache
-	folderCache       *businesslogic.FolderCache
-	discussionCache   *businesslogic.DiscussionCache
-	bannedWordList    *businesslogic.BannedWordsList
-	bookmarkProcessor *businesslogic.BookmarkProcessor
+	postProcessor    *businesslogic.PostProcessor
+	userCache        *businesslogic.UserCache
+	folderCache      *businesslogic.FolderCache
+	discussionCache  *businesslogic.DiscussionCache
+	bannedWordList   *businesslogic.BannedWordsList
 }
 
 func NewApp() *App {
@@ -60,13 +56,12 @@ func NewApp() *App {
 	discussionCache := businesslogic.NewDiscussionCache(folderCache)
 
 	app := &App{
-		postProcessor:     businesslogic.NewPostProcessor(userCache, folderCache, discussionCache),
-		mostActiveWorker:  businesslogic.NewMostActiveWorker(),
-		userCache:         userCache,
-		folderCache:       folderCache,
-		discussionCache:   discussionCache,
-		bannedWordList:    businesslogic.NewBannedWordsList(),
-		bookmarkProcessor: businesslogic.NewBookmarkProcessor(),
+		postProcessor:    businesslogic.NewPostProcessor(userCache, folderCache, discussionCache),
+		mostActiveWorker: businesslogic.NewMostActiveWorker(),
+		userCache:        userCache,
+		folderCache:      folderCache,
+		discussionCache:  discussionCache,
+		bannedWordList:   businesslogic.NewBannedWordsList(),
 	}
 
 	app.router = app.configureRouter()
@@ -100,7 +95,7 @@ func (a *App) configureRouter() *mux.Router {
 
 func (a *App) configureFolderRouter(router *mux.Router) {
 
-	folderHandler := handlers.NewFolderHandler(a.userCache, a.folderCache, a.discussionCache, a.bookmarkProcessor, a.postProcessor)
+	folderHandler := handlers.NewFolderHandler(a.userCache, a.folderCache, a.discussionCache, a.postProcessor)
 
 	folderRouter := router.PathPrefix("/folder").Subrouter().StrictSlash(false)
 	folderRouter.HandleFunc("", folderHandler.GetFolders).Methods(http.MethodGet, http.MethodOptions)
@@ -161,7 +156,8 @@ func (a *App) configureUserRouter(router *mux.Router) {
 	userRouter.HandleFunc("/password/validatekey", userHandler.ValidatePasswordResetKey).Methods(http.MethodGet, http.MethodOptions)
 	userRouter.HandleFunc("/account/confirm", userHandler.ValidateSignupConfirmationKey).Methods(http.MethodGet, http.MethodOptions)
 
-	userRouter.HandleFunc("/discussion/{discussionId}/bookmark", userHandler.DeleteDiscussionBookmark).Methods(http.MethodDelete, http.MethodOptions)
+	userRouter.HandleFunc("/discussion/{discussionId:[0-9]+}/bookmark", userHandler.DeleteDiscussionBookmark).Methods(http.MethodDelete, http.MethodOptions)
+	userRouter.HandleFunc("/discussion/{discussionId:[0-9]+}/bookmark", userHandler.UpdateDiscussionBookmark).Methods(http.MethodPut, http.MethodOptions)
 
 	userRouter.HandleFunc("/ignore/{userId}", userHandler.UpdateIgnore).Methods(http.MethodPut, http.MethodOptions)
 	userRouter.HandleFunc("/ignore/list", userHandler.GetIgnoredUsers).Methods(http.MethodGet, http.MethodOptions)
@@ -228,7 +224,6 @@ func (a *App) Serve() {
 
 func (a *App) Shutdown() {
 	a.postProcessor.Close()
-	a.bookmarkProcessor.Close()
 	a.mostActiveWorker.Close()
 }
 

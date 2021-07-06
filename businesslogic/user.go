@@ -607,6 +607,28 @@ func UpdateBio(user *model.User, bio string, userCache *UserCache, db *gorm.DB) 
 
 }
 
+func UpdateDiscussionBookmark(user *model.User, discussion *model.Discussion, nextBookmark *model.UserDiscussionBookmark, userCache *UserCache, db *gorm.DB) *model.UserDiscussionBookmark {
+
+	lastBookmark := userCache.GetBookmark(user, discussion)
+	if lastBookmark == nil || nextBookmark.LastPostCount > lastBookmark.LastPostCount {
+
+		nextBookmark.DiscussionId = discussion.Id
+		nextBookmark.UserId = user.Id
+
+		if result := db.Raw("call update_user_bookmark(?, ?, ?, ?, ?)", nextBookmark.UserId, nextBookmark.DiscussionId, nextBookmark.LastPostId, nextBookmark.LastPostCount, nextBookmark.LastPostDate).First(nextBookmark); result.Error != nil {
+			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+		}
+
+		userCache.PutBookmark(nextBookmark)
+
+		return nextBookmark
+
+	} else {
+		return lastBookmark
+	}
+
+}
+
 func DeleteDiscussionBookmark(user *model.User, discussion *model.Discussion, userCache *UserCache, db *gorm.DB) {
 
 	if result := db.Exec("call delete_user_bookmark(?, ?)", user.Id, discussion.Id); result.Error != nil {

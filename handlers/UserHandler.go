@@ -287,6 +287,23 @@ func (h *UserHandler) UpdateIgnore(res http.ResponseWriter, req *http.Request) {
 	})
 }
 
+func (h *UserHandler) UpdateDiscussionBookmark(res http.ResponseWriter, req *http.Request) {
+	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		discussionId := utils.ExtractVarInt("discussionId", req)
+		discussion := h.discussionCache.Get(discussionId, user)
+
+		var nextBookmark model.UserDiscussionBookmark
+		if err := json.NewDecoder(req.Body).Decode(&nextBookmark); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+
+		currentBookmark := businesslogic.UpdateDiscussionBookmark(user, discussion, &nextBookmark, h.userCache, db)
+		return http.StatusOK, currentBookmark, ""
+
+	})
+}
+
 func (h *UserHandler) DeleteDiscussionBookmark(res http.ResponseWriter, req *http.Request) {
 	utils.AuthenticatedHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
 
