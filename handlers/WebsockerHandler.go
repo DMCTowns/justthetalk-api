@@ -33,17 +33,9 @@ import (
 )
 
 const (
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
-
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
-
-	// Maximum message size allowed from peer.
-	maxMessageSize = 512
+	writeWait      = 10 * time.Second
+	pingPeriod     = 60 * time.Second
+	maxMessageSize = 1024
 )
 
 type websocketClient struct {
@@ -51,15 +43,12 @@ type websocketClient struct {
 	user       *model.User
 	connection *websocket.Conn
 	writeQueue chan string
-	ticker     *time.Ticker
+	quitFlag   chan bool
 }
 
 type WebsockerHandler struct {
 	userCache *businesslogic.UserCache
-
-	upgrader   websocket.Upgrader
-	pingPeriod time.Duration
-	writeWait  time.Duration
+	upgrader  websocket.Upgrader
 }
 
 func NewWebsockerHandler(userCache *businesslogic.UserCache) *WebsockerHandler {
@@ -69,9 +58,7 @@ func NewWebsockerHandler(userCache *businesslogic.UserCache) *WebsockerHandler {
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
-		userCache:  userCache,
-		pingPeriod: 30 * time.Second,
-		writeWait:  10 * time.Second,
+		userCache: userCache,
 	}
 
 	websockerHandler.upgrader.CheckOrigin = websockerHandler.checkOrigin
@@ -113,22 +100,6 @@ func (h *WebsockerHandler) findUser(userId uint) *model.User {
 
 func NewWebsocketClient(connection *websocket.Conn, handler *WebsockerHandler) *websocketClient {
 
-	client := &websocketClient{
-		user:       nil,
-		connection: connection,
-		handler:    handler,
-		writeQueue: make(chan string),
-	}
-
-	go client.readWorker()
-	go client.writeWorker()
-
-	return client
-
-}
-
-func (client *websocketClient) close() {
-
 	defer func() {
 		if r := recover(); r != nil {
 			err := r.(error)
@@ -137,42 +108,85 @@ func (client *websocketClient) close() {
 		}
 	}()
 
-	client.ticker.Stop()
-	close(client.writeQueue)
-	client.connection.Close()
+	client := &websocketClient{
+		user:       nil,
+		connection: connection,
+		handler:    handler,
+		writeQueue: make(chan string),
+		quitFlag:   make(chan bool),
+	}
 
-	client.handler.unregisterClient(client)
+	go client.readWorker()
+	go client.writeWorker()
+
+	go func() {
+
+		<-client.quitFlag
+		log.Info("Closing client")
+
+		close(client.quitFlag)
+		client.connection.Close()
+
+		handler.unregisterClient(client)
+
+	}()
+
+	return client
 
 }
 
 func (client *websocketClient) readWorker() {
 
-	client.connection.SetReadLimit(maxMessageSize)
-	client.connection.SetReadDeadline(time.Now().Add(pongWait))
-	client.connection.SetPongHandler(func(string) error { client.connection.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	log.Debug("Creating read worker")
 
-	for {
+	defer func() {
+		if r := recover(); r != nil {
+			err := r.(error)
+			log.Errorf("%v", err)
+			debug.PrintStack()
+		}
+		client.quitFlag <- true
+		log.Debug("Closing read worker")
+	}()
+
+	client.connection.SetReadLimit(maxMessageSize)
+	client.connection.SetReadDeadline(time.Now().Add(pingPeriod * 3))
+
+	quit := false
+	for !quit {
 		_, message, err := client.connection.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Errorf("error: %v", err)
 			}
-			break
+			quit = true
+		} else {
+			client.processMessage(string(message))
+			client.connection.SetReadDeadline(time.Now().Add(pingPeriod * 3))
 		}
-		client.processMessage(string(message))
 	}
 
 }
 
 func (client *websocketClient) writeWorker() {
 
-	client.ticker = time.NewTicker(pingPeriod)
+	log.Debug("Creating write worker")
 
 	defer func() {
-		client.close()
+		if r := recover(); r != nil {
+			err := r.(error)
+			log.Errorf("%v", err)
+			debug.PrintStack()
+		}
+		close(client.writeQueue)
+		log.Debug("Closing write worker")
 	}()
 
-	for {
+	ticker := time.NewTicker(pingPeriod)
+	defer ticker.Stop()
+
+	quit := false
+	for !quit {
 		select {
 
 		case message, ok := <-client.writeQueue:
@@ -180,7 +194,7 @@ func (client *websocketClient) writeWorker() {
 			client.connection.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				client.connection.WriteMessage(websocket.CloseMessage, []byte{})
-				return
+				break
 			}
 
 			w, err := client.connection.NextWriter(websocket.TextMessage)
@@ -195,15 +209,33 @@ func (client *websocketClient) writeWorker() {
 				break
 			}
 
-		case <-client.ticker.C:
-			client.connection.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := client.connection.WriteMessage(websocket.PingMessage, nil); err != nil {
-				break
-			}
+		case <-ticker.C:
+			client.sendPing()
+
+		case <-client.quitFlag:
+			quit = true
+			break
 
 		}
 	}
 
+}
+
+func (client *websocketClient) sendPing() {
+
+	log.Debug("Ping")
+
+	client.connection.SetWriteDeadline(time.Now().Add(writeWait))
+
+	w, err := client.connection.NextWriter(websocket.TextMessage)
+	if err != nil {
+		panic(err)
+	}
+
+	w.Write([]byte("ping!"))
+	if err := w.Close(); err != nil {
+		panic(err)
+	}
 }
 
 func (client *websocketClient) processMessage(msg string) {
@@ -216,6 +248,8 @@ func (client *websocketClient) processMessage(msg string) {
 		}
 	}()
 
+	log.Debug(msg)
+
 	f := strings.Split(msg, "!")
 
 	if len(f) != 2 {
@@ -224,20 +258,24 @@ func (client *websocketClient) processMessage(msg string) {
 
 	switch f[0] {
 	case "hello":
-		client.hello(f[1])
+		go client.hello(f[1])
+	case "pong":
+		log.Debug("Got pong")
 	}
 
 }
 
 func (client *websocketClient) hello(accessToken string) {
 
+	log.Debug("Creating pubsub reader")
+
 	defer func() {
 		if r := recover(); r != nil {
 			err := r.(error)
 			log.Errorf("%v", err)
 			debug.PrintStack()
-			client.close()
 		}
+		log.Debug("Closing pubsub reader")
 	}()
 
 	if len(accessToken) == 0 {
@@ -260,16 +298,16 @@ func (client *websocketClient) hello(accessToken string) {
 	client.user = client.handler.findUser(claims.UserId)
 
 	subscription := client.handler.registerClient(client)
+	defer subscription.Close()
 
-	defer func() {
-		subscription.Close()
-		client.close()
-	}()
-
-	for {
+	quit := false
+	for !quit {
 		select {
 		case msg := <-subscription.Channel():
 			client.writeQueue <- msg.Payload
+		case <-client.quitFlag:
+			quit = true
+			break
 		}
 	}
 

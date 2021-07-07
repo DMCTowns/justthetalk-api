@@ -99,6 +99,8 @@ func (p *PostProcessor) QueueLength() int {
 
 func (p *PostProcessor) worker() {
 
+	log.Info("Starting PostProcessor")
+
 	defer func() {
 		p.isRunning = false
 	}()
@@ -112,6 +114,8 @@ func (p *PostProcessor) worker() {
 		go p.DispatchToElasticsearch(post)
 	}
 	p.endWait.Done()
+
+	log.Info("Closed PostProcessor")
 
 }
 
