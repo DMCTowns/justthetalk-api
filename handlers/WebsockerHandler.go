@@ -91,7 +91,9 @@ func (h *WebsockerHandler) registerClient(client *websocketClient) *redis.PubSub
 }
 
 func (h *WebsockerHandler) unregisterClient(client *websocketClient) {
-	h.userCache.RemoveSubscriber(client.user)
+	if client.user != nil {
+		h.userCache.RemoveSubscriber(client.user)
+	}
 }
 
 func (h *WebsockerHandler) findUser(userId uint) *model.User {
@@ -296,6 +298,9 @@ func (client *websocketClient) hello(accessToken string) {
 	}
 
 	client.user = client.handler.findUser(claims.UserId)
+	if client.user == nil {
+		panic(errors.New("user not found"))
+	}
 
 	subscription := client.handler.registerClient(client)
 	defer subscription.Close()
