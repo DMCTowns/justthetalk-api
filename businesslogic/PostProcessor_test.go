@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
 
@@ -61,8 +62,15 @@ func TestPublishPostToSearchIndex(t *testing.T) {
 	connections.WithDatabase(10*time.Second, func(db *gorm.DB) {
 
 		var post model.Post
+		// normal
 		db.Raw("call get_post(?)", 446).First(&post)
-		p.DispatchToElasticsearch(&post)
+		success := p.DispatchToElasticsearch(&post)
+		assert.True(t, success)
+
+		// deleted
+		db.Raw("call get_post(?)", 90).First(&post)
+		success = p.DispatchToElasticsearch(&post)
+		assert.True(t, success)
 
 	})
 

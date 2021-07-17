@@ -28,10 +28,20 @@ import (
 
 	"runtime/debug"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"gorm.io/gorm"
 
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	indexRequestCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "elasticsearch_index_request_count",
+		Help: "Count of post index requests",
+	}, []string{"success"})
 )
 
 const (
@@ -168,21 +178,22 @@ func (p *PostProcessor) DispatchToSubscribers(post *model.Post) {
 
 }
 
-func (p *PostProcessor) DispatchToElasticsearch(post *model.Post) {
+func (p *PostProcessor) DispatchToElasticsearch(post *model.Post) bool {
 
 	defer func() {
 		if r := recover(); r != nil {
-			err := r.(error)
-			log.Error(err)
-			debug.PrintStack()
+			indexRequestCount.WithLabelValues("failure").Inc()
+			log.Errorf("ES index failure: %v", r.(error))
 		}
 	}()
 
-	if post.Status == model.PostStatusOK {
+	if post.Status == model.PostStatusOK || post.Status == model.PostStatusWatch {
 		p.indexPostIntoSearchEngine(post)
 	} else {
 		p.deletePostFromSearchEngine(post)
 	}
+
+	return true
 
 }
 
@@ -198,18 +209,18 @@ func (p *PostProcessor) deletePostFromSearchEngine(post *model.Post) {
 
 	res, err := req.Do(ctx, connections.ElasticSearchConnection())
 	if err != nil {
-		log.Fatalf("Error getting response: %s", err)
+		panic(fmt.Errorf("[%s] error deleting document ID=%d", res.Status(), post.Id))
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		log.Errorf("[%s] Error deleting document ID=%d", res.Status(), post.Id)
+		panic(fmt.Errorf("[%s] error deleting document ID=%d", res.Status(), post.Id))
 	} else {
 		var r map[string]interface{}
 		if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
-			log.Errorf("Error parsing the response body: %s", err)
+			panic(fmt.Errorf("error parsing the response body: %s", err))
 		} else {
-			log.Infof("%v", r)
+			log.Debugf("%v", r)
 		}
 	}
 
@@ -253,24 +264,28 @@ func (p *PostProcessor) indexPostIntoSearchEngine(post *model.Post) {
 		Refresh:    "true",
 	}
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFn()
 
 	res, err := req.Do(ctx, connections.ElasticSearchConnection())
 	if err != nil {
-		log.Fatalf("Error getting response: %s", err)
+		panic(err)
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		log.Errorf("[%s] Error indexing document ID=%d", res.Status(), post.Id)
+		panic(fmt.Errorf("[%s] error indexing document ID=%d", res.Status(), post.Id))
 	} else {
+
+		indexRequestCount.WithLabelValues("success").Inc()
+
 		var r map[string]interface{}
 		if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
-			log.Errorf("Error parsing the response body: %s", err)
+			panic(fmt.Errorf("error parsing the response body: %s", err))
 		} else {
-			log.Infof("[%s] %s; version=%d", res.Status(), r["result"], int(r["_version"].(float64)))
+			log.Debugf("[%s] %s; version=%d", res.Status(), r["result"], int(r["_version"].(float64)))
 		}
+
 	}
 
 }
@@ -280,8 +295,6 @@ func (p *PostProcessor) IndexAllPosts() {
 	connections.WithDatabase(1*time.Hour, func(db *gorm.DB) {
 
 		rows, err := db.Raw("call get_indexable_posts();").Rows()
-		defer rows.Close()
-
 		if err != nil {
 			panic(err)
 		}
