@@ -17,6 +17,7 @@ package handlers
 
 import (
 	"errors"
+	"io"
 	"justthetalk/businesslogic"
 	"justthetalk/model"
 	"justthetalk/utils"
@@ -91,7 +92,9 @@ func (h *WebsockerHandler) registerClient(client *websocketClient) *redis.PubSub
 }
 
 func (h *WebsockerHandler) unregisterClient(client *websocketClient) {
-	h.userCache.RemoveSubscriber(client.user)
+	if client.user != nil {
+		h.userCache.RemoveSubscriber(client.user)
+	}
 }
 
 func (h *WebsockerHandler) findUser(userId uint) *model.User {
@@ -182,6 +185,9 @@ func (client *websocketClient) writeWorker() {
 		log.Debug("Closing write worker")
 	}()
 
+	var err error
+	var writer io.WriteCloser
+
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 
@@ -197,16 +203,14 @@ func (client *websocketClient) writeWorker() {
 				break
 			}
 
-			w, err := client.connection.NextWriter(websocket.TextMessage)
-			if err != nil {
-				log.Error(err)
-				break
+			if writer, err = client.connection.NextWriter(websocket.TextMessage); err == nil {
+				writer.Write([]byte(message))
+				err = writer.Close()
 			}
 
-			w.Write([]byte(message))
-			if err := w.Close(); err != nil {
+			if err != nil {
 				log.Error(err)
-				break
+				quit = true
 			}
 
 		case <-ticker.C:
@@ -214,7 +218,6 @@ func (client *websocketClient) writeWorker() {
 
 		case <-client.quitFlag:
 			quit = true
-			break
 
 		}
 	}
@@ -279,7 +282,7 @@ func (client *websocketClient) hello(accessToken string) {
 	}()
 
 	if len(accessToken) == 0 {
-		panic(errors.New("Invalid access token"))
+		panic(errors.New("invalid access token"))
 	}
 
 	token, err := jwt.ParseWithClaims(accessToken, &model.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
@@ -287,15 +290,18 @@ func (client *websocketClient) hello(accessToken string) {
 	})
 
 	if err != nil {
-		panic(errors.New("Invalid access token"))
+		panic(errors.New("invalid access token"))
 	}
 
 	claims, ok := token.Claims.(*model.UserClaims)
 	if !ok {
-		panic(errors.New("Invalid access token"))
+		panic(errors.New("invalid access token"))
 	}
 
 	client.user = client.handler.findUser(claims.UserId)
+	if client.user == nil {
+		panic(errors.New("user not found"))
+	}
 
 	subscription := client.handler.registerClient(client)
 	defer subscription.Close()
@@ -307,7 +313,6 @@ func (client *websocketClient) hello(accessToken string) {
 			client.writeQueue <- msg.Payload
 		case <-client.quitFlag:
 			quit = true
-			break
 		}
 	}
 
