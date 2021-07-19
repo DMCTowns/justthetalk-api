@@ -159,6 +159,7 @@ func (client *websocketClient) readWorker() {
 	for !quit {
 		_, message, err := client.connection.ReadMessage()
 		if err != nil {
+			log.Debugf("error: %v", err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Errorf("error: %v", err)
 			}
@@ -275,6 +276,7 @@ func (client *websocketClient) hello(accessToken string) {
 	defer func() {
 		if r := recover(); r != nil {
 			err := r.(error)
+			client.writeQueue <- "nack!"
 			log.Errorf("%v", err)
 			debug.PrintStack()
 		}
@@ -305,6 +307,8 @@ func (client *websocketClient) hello(accessToken string) {
 
 	subscription := client.handler.registerClient(client)
 	defer subscription.Close()
+
+	client.writeQueue <- "ack!"
 
 	quit := false
 	for !quit {
