@@ -31,12 +31,22 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 const (
 	writeWait      = 10 * time.Second
 	pingPeriod     = 60 * time.Second
 	maxMessageSize = 1024
+)
+
+var (
+	websocketGuage = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "justthetalk_active_websocket_count",
+		Help: "Count of active websockets",
+	})
 )
 
 type websocketClient struct {
@@ -88,10 +98,12 @@ func (h *WebsockerHandler) ServeHTTP(res http.ResponseWriter, req *http.Request)
 }
 
 func (h *WebsockerHandler) registerClient(client *websocketClient) *redis.PubSub {
+	websocketGuage.Inc()
 	return h.userCache.AddSubscriber(client.user)
 }
 
 func (h *WebsockerHandler) unregisterClient(client *websocketClient) {
+	websocketGuage.Dec()
 	if client.user != nil {
 		h.userCache.RemoveSubscriber(client.user)
 	}
@@ -125,8 +137,9 @@ func NewWebsocketClient(connection *websocket.Conn, handler *WebsockerHandler) *
 	go func() {
 
 		<-client.quitFlag
-		log.Info("Closing client")
+		log.Debug("Closing client")
 
+		close(client.writeQueue)
 		close(client.quitFlag)
 		client.connection.Close()
 
@@ -145,7 +158,7 @@ func (client *websocketClient) readWorker() {
 	defer func() {
 		if r := recover(); r != nil {
 			err := r.(error)
-			log.Errorf("%v", err)
+			log.Debugf("%v", err)
 			debug.PrintStack()
 		}
 		client.quitFlag <- true
@@ -179,10 +192,10 @@ func (client *websocketClient) writeWorker() {
 	defer func() {
 		if r := recover(); r != nil {
 			err := r.(error)
-			log.Errorf("%v", err)
+			log.Debugf("%v", err)
 			debug.PrintStack()
 		}
-		close(client.writeQueue)
+		client.quitFlag <- true
 		log.Debug("Closing write worker")
 	}()
 
@@ -210,7 +223,7 @@ func (client *websocketClient) writeWorker() {
 			}
 
 			if err != nil {
-				log.Error(err)
+				log.Debug(err)
 				quit = true
 			}
 
