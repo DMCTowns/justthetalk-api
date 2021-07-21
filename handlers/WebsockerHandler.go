@@ -55,6 +55,7 @@ type websocketClient struct {
 	connection *websocket.Conn
 	writeQueue chan string
 	quitFlag   chan bool
+	hasQuit    bool
 }
 
 type WebsockerHandler struct {
@@ -137,6 +138,8 @@ func NewWebsocketClient(connection *websocket.Conn, handler *WebsockerHandler) *
 	go func() {
 
 		<-client.quitFlag
+		client.hasQuit = true
+
 		log.Debug("Closing client")
 
 		close(client.writeQueue)
@@ -161,7 +164,9 @@ func (client *websocketClient) readWorker() {
 			log.Debugf("%v", err)
 			debug.PrintStack()
 		}
-		client.quitFlag <- true
+		if !client.hasQuit {
+			client.quitFlag <- true
+		}
 		log.Debug("Closing read worker")
 	}()
 
@@ -195,7 +200,9 @@ func (client *websocketClient) writeWorker() {
 			log.Debugf("%v", err)
 			debug.PrintStack()
 		}
-		client.quitFlag <- true
+		if !client.hasQuit {
+			client.quitFlag <- true
+		}
 		log.Debug("Closing write worker")
 	}()
 
