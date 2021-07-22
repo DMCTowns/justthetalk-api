@@ -17,7 +17,6 @@ package handlers
 
 import (
 	"errors"
-	"io"
 	"justthetalk/businesslogic"
 	"justthetalk/model"
 	"justthetalk/utils"
@@ -99,14 +98,18 @@ func (h *WebsockerHandler) ServeHTTP(res http.ResponseWriter, req *http.Request)
 }
 
 func (h *WebsockerHandler) registerClient(client *websocketClient) *redis.PubSub {
-	websocketGuage.Inc()
-	return h.userCache.AddSubscriber(client.user)
+	if client.user != nil {
+		websocketGuage.Inc()
+		return h.userCache.AddSubscriber(client.user)
+	}
+	return nil
 }
 
 func (h *WebsockerHandler) unregisterClient(client *websocketClient) {
-	websocketGuage.Dec()
 	if client.user != nil {
+		websocketGuage.Dec()
 		h.userCache.RemoveSubscriber(client.user)
+		client.user = nil
 	}
 }
 
@@ -207,7 +210,6 @@ func (client *websocketClient) writeWorker() {
 	}()
 
 	var err error
-	var writer io.WriteCloser
 
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
@@ -218,20 +220,11 @@ func (client *websocketClient) writeWorker() {
 
 		case message, ok := <-client.writeQueue:
 
-			client.connection.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				client.connection.WriteMessage(websocket.CloseMessage, []byte{})
-				break
-			}
-
-			if writer, err = client.connection.NextWriter(websocket.TextMessage); err == nil {
-				writer.Write([]byte(message))
-				err = writer.Close()
-			}
-
-			if err != nil {
-				log.Debug(err)
-				quit = true
+				panic(errors.New("channel closed"))
+			} else if err = client.send(message); err != nil {
+				panic(err)
 			}
 
 		case <-ticker.C:
@@ -246,20 +239,30 @@ func (client *websocketClient) writeWorker() {
 }
 
 func (client *websocketClient) sendPing() {
+	client.send("ping!")
+}
 
-	log.Debug("Ping")
+func (client *websocketClient) sendPong() {
+	client.send("pong!")
+}
+
+func (client *websocketClient) send(message string) error {
+
+	log.Debug("Sending: " + message)
 
 	client.connection.SetWriteDeadline(time.Now().Add(writeWait))
 
 	w, err := client.connection.NextWriter(websocket.TextMessage)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	w.Write([]byte("ping!"))
-	if err := w.Close(); err != nil {
-		panic(err)
+	if nBytes, err := w.Write([]byte(message)); err != nil || nBytes != len(message) {
+		return err
 	}
+
+	return w.Close()
+
 }
 
 func (client *websocketClient) processMessage(msg string) {
@@ -283,6 +286,9 @@ func (client *websocketClient) processMessage(msg string) {
 	switch f[0] {
 	case "hello":
 		go client.hello(f[1])
+	case "ping":
+		log.Debug("Got ping")
+		client.sendPong()
 	case "pong":
 		log.Debug("Got pong")
 	}
@@ -326,6 +332,9 @@ func (client *websocketClient) hello(accessToken string) {
 	}
 
 	subscription := client.handler.registerClient(client)
+	if subscription == nil {
+		panic(errors.New("user is nil"))
+	}
 	defer subscription.Close()
 
 	client.writeQueue <- "ack!"
