@@ -27,6 +27,18 @@ import (
 
 func main() {
 
+	logLevel := log.InfoLevel
+	logLevelEnv := os.Getenv("LOG_LEVEL")
+	switch logLevelEnv {
+	case "DEBUG":
+		logLevel = log.DebugLevel
+	case "WARN":
+		logLevel = log.WarnLevel
+	case "ERROR":
+		logLevel = log.ErrorLevel
+	}
+	log.SetLevel(logLevel)
+
 	log.Info("Starting JustTheTalk API Server...")
 
 	if secret := os.Getenv("RECAPTCHA_API_KEY"); len(secret) == 0 {
