@@ -146,7 +146,10 @@ func SendRespsonse(statusCode int, responseData interface{}, message string, res
 
 	if data, err := json.Marshal(result); err == nil {
 		res.WriteHeader(statusCode)
-		res.Write([]byte(data))
+		_, err := res.Write([]byte(data))
+		if err != nil {
+			PanicWithWrapper(err, ErrInternalError)
+		}
 	} else {
 		PanicWithWrapper(err, ErrInternalError)
 	}
