@@ -39,47 +39,47 @@ func NewPostFormatter() *PostFormatter {
 	formatter := &PostFormatter{
 		formatters: []PostFormat{
 			{
-				re:       regexp.MustCompile("^&gt; "),
+				re:       regexp.MustCompile(`^&gt; .+`),
 				formatFn: formatQuoted,
 			},
 			{
-				re:       regexp.MustCompile("^s "),
+				re:       regexp.MustCompile(`^s .+`),
 				formatFn: formatStrikethrough,
 			},
 			{
-				re:       regexp.MustCompile("^b "),
+				re:       regexp.MustCompile(`^b .+`),
 				formatFn: formatBold,
 			},
 			{
-				re:       regexp.MustCompile("^i "),
+				re:       regexp.MustCompile(`^i .+`),
 				formatFn: formatItalic,
 			},
 			{
-				re:       regexp.MustCompile("^u "),
+				re:       regexp.MustCompile(`^u .+`),
 				formatFn: formatUnderline,
 			},
 			{
-				re:       regexp.MustCompile("^c "),
+				re:       regexp.MustCompile(`^c .+`),
 				formatFn: formatCentre,
 			},
 			{
-				re:       regexp.MustCompile("^`"),
+				re:       regexp.MustCompile("^` .+"),
 				formatFn: formatCode,
 			},
 			{
-				re:       regexp.MustCompile("^\\*"),
+				re:       regexp.MustCompile(`^\* .+`),
 				formatFn: formatBullet,
 			},
 			{
-				re:       regexp.MustCompile("^]+ "),
+				re:       regexp.MustCompile(`^]+ .+`),
 				formatFn: formatIndent,
 			},
 			{
-				re:       regexp.MustCompile("^\\} "),
+				re:       regexp.MustCompile(`^\}$`),
 				formatFn: formatLinebreak,
 			},
 			{
-				re:       regexp.MustCompile("^\\| "),
+				re:       regexp.MustCompile(`^\| .+`),
 				formatFn: formatSpoiler,
 			},
 		},
