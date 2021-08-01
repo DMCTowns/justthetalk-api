@@ -127,7 +127,11 @@ func HandlerFunction(res http.ResponseWriter, req *http.Request, targetFunc Hand
 	res.Header().Set(HeaderConnection, "Keep-Alive")
 	res.Header().Set(HeaderKeepAlive, "timeout=60")
 
-	SendRespsonse(statusCode, responseData, message, res)
+	if statusCode != http.StatusNoContent {
+		SendRespsonse(statusCode, responseData, message, res)
+	} else {
+		res.WriteHeader(statusCode)
+	}
 
 }
 

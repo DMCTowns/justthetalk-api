@@ -303,7 +303,7 @@ func (client *websocketClient) hello(accessToken string) {
 		if r := recover(); r != nil {
 			err := r.(error)
 			client.writeQueue <- "nack!"
-			log.Errorf("%v", err)
+			log.Debugf("%v", err)
 			debug.PrintStack()
 		}
 		log.Debug("Closing pubsub reader")
