@@ -174,7 +174,10 @@ func (client *websocketClient) readWorker() {
 	}()
 
 	client.connection.SetReadLimit(maxMessageSize)
-	client.connection.SetReadDeadline(time.Now().Add(pingPeriod * 3))
+	err := client.connection.SetReadDeadline(time.Now().Add(pingPeriod * 3))
+	if err != nil {
+		return
+	}
 
 	quit := false
 	for !quit {
@@ -187,7 +190,10 @@ func (client *websocketClient) readWorker() {
 			quit = true
 		} else {
 			client.processMessage(string(message))
-			client.connection.SetReadDeadline(time.Now().Add(pingPeriod * 3))
+			err := client.connection.SetReadDeadline(time.Now().Add(pingPeriod * 3))
+			if err != nil {
+				return
+			}
 		}
 	}
 
@@ -201,7 +207,6 @@ func (client *websocketClient) writeWorker() {
 		if r := recover(); r != nil {
 			err := r.(error)
 			log.Debugf("%v", err)
-			debug.PrintStack()
 		}
 		if !client.hasQuit {
 			client.quitFlag <- true
@@ -221,7 +226,10 @@ func (client *websocketClient) writeWorker() {
 		case message, ok := <-client.writeQueue:
 
 			if !ok {
-				client.connection.WriteMessage(websocket.CloseMessage, []byte{})
+				err = client.connection.WriteMessage(websocket.CloseMessage, []byte{})
+				if err != nil {
+					log.Debug(err)
+				}
 				panic(errors.New("channel closed"))
 			} else if err = client.send(message); err != nil {
 				panic(err)
@@ -239,29 +247,39 @@ func (client *websocketClient) writeWorker() {
 }
 
 func (client *websocketClient) sendPing() {
-	client.send("ping!")
+	err := client.send("ping!")
+	if err != nil {
+		log.Debug(err)
+	}
 }
 
 func (client *websocketClient) sendPong() {
-	client.send("pong!")
+	err := client.send("pong!")
+	if err != nil {
+		log.Debug(err)
+	}
 }
 
 func (client *websocketClient) send(message string) error {
 
 	log.Debug("Sending: " + message)
 
-	client.connection.SetWriteDeadline(time.Now().Add(writeWait))
+	err := client.connection.SetWriteDeadline(time.Now().Add(writeWait))
+	if err != nil {
+		return err
+	}
 
 	w, err := client.connection.NextWriter(websocket.TextMessage)
 	if err != nil {
 		return err
 	}
+	defer w.Close()
 
 	if nBytes, err := w.Write([]byte(message)); err != nil || nBytes != len(message) {
 		return err
 	}
 
-	return w.Close()
+	return nil
 
 }
 
