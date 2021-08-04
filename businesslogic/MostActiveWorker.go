@@ -44,18 +44,20 @@ func (w *MostActiveWorker) Close() {
 }
 
 func (w *MostActiveWorker) worker() {
+
 	log.Info("Starting MostActiveWorker...")
+
 	w.wait.Add(1)
-	for !w.quit {
-		select {
-		case <-w.ticker.C:
-			connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
-				if result := db.Exec("call calculate_frontpage_mostactive()"); result.Error != nil {
-					log.Error(result.Error)
-				}
-			})
-		}
+	defer w.wait.Done()
+
+	for range w.ticker.C {
+		connections.WithDatabase(1*time.Second, func(db *gorm.DB) {
+			if result := db.Exec("call calculate_frontpage_mostactive()"); result.Error != nil {
+				log.Error(result.Error)
+			}
+		})
 	}
-	w.wait.Done()
+
 	log.Info("...closing MostActiveWorker")
+
 }

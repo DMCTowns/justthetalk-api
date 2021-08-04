@@ -75,7 +75,9 @@ func (h *FolderHandler) GetFolders(res http.ResponseWriter, req *http.Request) {
 			if shouldAdd {
 
 				var folderCopy model.Folder
-				copier.Copy(&folderCopy, &folder)
+				if err := copier.Copy(&folderCopy, &folder); err != nil {
+					panic(err)
+				}
 
 				_, folderCopy.IsSubscribed = subsMap[folderCopy.Id]
 
@@ -96,7 +98,10 @@ func (h *FolderHandler) GetFolder(res http.ResponseWriter, req *http.Request) {
 		folder := h.folderCache.Get(folderId, user)
 
 		var folderCopy model.Folder
-		copier.Copy(&folderCopy, &folder)
+		if err := copier.Copy(&folderCopy, &folder); err != nil {
+			panic(err)
+		}
+
 		folderCopy.IsSubscribed = businesslogic.GetFolderSubscriptionStatus(&folderCopy, user, db)
 
 		if folderCopy.Type == model.FolderTypeNormal {
@@ -358,7 +363,9 @@ func (h *FolderHandler) SubscribeToFolder(res http.ResponseWriter, req *http.Req
 		folder := h.folderCache.Get(folderId, user)
 
 		var folderCopy model.Folder
-		copier.Copy(&folderCopy, &folder)
+		if err := copier.Copy(&folderCopy, &folder); err != nil {
+			panic(err)
+		}
 
 		if req.Method == http.MethodPost {
 			businesslogic.SetFolderSubscriptionStatus(folder, user, db, h.userCache)

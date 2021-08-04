@@ -152,7 +152,9 @@ func (p *PostProcessor) DispatchToSubscribers(post *model.Post) {
 			for rows.Next() {
 
 				var subscriber subscribedUser
-				db.ScanRows(rows, &subscriber)
+				if err := db.ScanRows(rows, &subscriber); err != nil {
+					panic(err)
+				}
 
 				topic := fmt.Sprintf("user:%d", subscriber.UserId)
 				if p.userCache.IsActiveSubscriber(topic) {
@@ -162,7 +164,7 @@ func (p *PostProcessor) DispatchToSubscribers(post *model.Post) {
 
 					if data, err := json.Marshal(post); err == nil {
 						strData := string(data)
-						log.Infof("Dispatching to: %s", topic)
+						log.Debugf("Dispatching to: %s", topic)
 						connections.RedisConnection().Publish(ctx, topic, strData)
 					} else {
 						log.Error(err)
@@ -306,7 +308,9 @@ func (p *PostProcessor) IndexAllPosts() {
 		for rows.Next() {
 
 			var post model.IndexablePost
-			db.ScanRows(rows, &post)
+			if err := db.ScanRows(rows, &post); err != nil {
+				panic(err)
+			}
 
 			meta := []byte(fmt.Sprintf("{ \"index\" : { \"_id\" : \"%d\" } } \n", post.Id))
 

@@ -38,9 +38,7 @@ func FetchBlockedUsers(discussion *model.Discussion, db *gorm.DB) map[uint]*mode
 
 func mapBlockedUsers(blockedUsersList []*model.BlockedDiscussionUser) map[uint]*model.BlockedDiscussionUser {
 
-	var blockedUserMap map[uint]*model.BlockedDiscussionUser
-
-	blockedUserMap = make(map[uint]*model.BlockedDiscussionUser)
+	blockedUserMap := make(map[uint]*model.BlockedDiscussionUser)
 	for _, b := range blockedUsersList {
 		blockedUserMap[b.UserId] = b
 	}
@@ -318,9 +316,9 @@ func FilterUsers(filterKey string, db *gorm.DB) []*model.UserSearchResults {
 
 }
 
-func SetUserStatus(targetUser *model.User, fieldMap map[string]interface{}, adminUser *model.User, userCache *UserCache, db *gorm.DB) *model.User {
+func SetUserStatus(targetUser *model.User, fieldMap map[string]interface{}, adminUser *model.User, userCache *UserCache, db *gorm.DB) (*model.User, error) {
 
-	db.Transaction(func(tx *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
 
 		var result *gorm.DB
 		for k, v := range fieldMap {
@@ -384,9 +382,12 @@ func SetUserStatus(targetUser *model.User, fieldMap map[string]interface{}, admi
 
 	})
 
-	userCache.Flush(targetUser)
+	if err != nil {
+		return nil, err
+	}
 
-	return userCache.Get(targetUser.Id)
+	userCache.Flush(targetUser)
+	return userCache.Get(targetUser.Id), nil
 
 }
 

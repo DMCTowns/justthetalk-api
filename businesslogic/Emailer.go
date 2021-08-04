@@ -88,14 +88,14 @@ func SendEmail(toAddress string, params interface{}, templateType int) {
 		panic(err)
 	}
 
-	htmlBody := string(buf.Bytes())
+	htmlBody := buf.String()
 
 	buf.Reset()
 	template = config.textTemplate
 	if err := template.Execute(&buf, params); err != nil {
 		panic(err)
 	}
-	textBody := string(buf.Bytes())
+	textBody := buf.String()
 
 	mailFromAddress := os.Getenv("MAIL_FROM_ADDRESS")
 	mailFromName := os.Getenv("MAIL_FROM_NAME")

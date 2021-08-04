@@ -219,24 +219,6 @@ func DeleteDiscussionSubscriptions(subsList []uint, user *model.User, db *gorm.D
 
 }
 
-func updateFolderSubscription(userData *model.UserSidebandData, folderId uint, subscriptionState int, db *gorm.DB) {
-
-	var folderSubs []*model.UserFolderSubscription
-	if result := db.Raw("call update_user_folder_subscription(?, ?, ?)", userData.UserId, folderId, subscriptionState).Scan(&folderSubs); result.Error != nil {
-		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-	}
-
-	userData.FolderSubscriptions = make(map[uint]*model.UserFolderSubscription)
-	for _, sub := range folderSubs {
-		userData.FolderSubscriptions[sub.FolderId] = sub
-	}
-
-	if subscriptionState == 0 {
-		userData.FolderSubscriptionExceptions = make(map[uint]*model.UserFolderSubscriptionException)
-	}
-
-}
-
 func SetDiscussionSubscriptionStatus(discussion *model.Discussion, user *model.User, db *gorm.DB, userCache *UserCache) {
 
 	if result := db.Exec("call update_user_discussion_subscription(?, ?, ?)", user.Id, discussion.Id, 1); result.Error != nil {

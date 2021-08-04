@@ -343,7 +343,10 @@ func (h *AdminHandler) SetUserStatus(res http.ResponseWriter, req *http.Request)
 			panic(utils.ErrNotFound)
 		}
 
-		updated := businesslogic.SetUserStatus(targetUser, fieldMap, user, h.userCache, db)
+		updated, err := businesslogic.SetUserStatus(targetUser, fieldMap, user, h.userCache, db)
+		if err != nil {
+			panic(err)
+		}
 
 		return http.StatusOK, updated, ""
 

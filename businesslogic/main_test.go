@@ -38,7 +38,9 @@ func TestMain(m *testing.M) {
 
 	connections.RedisConnection().FlushAll(context.Background())
 
-	os.Chdir("../")
+	if err := os.Chdir("../"); err != nil {
+		log.Fatal(err)
+	}
 
 	file, err := os.Open("./env.local")
 	if err != nil {

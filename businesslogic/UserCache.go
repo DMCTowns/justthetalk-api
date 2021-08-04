@@ -38,7 +38,7 @@ type UserCache struct {
 
 func NewUserCache() *UserCache {
 	cache := &UserCache{
-		subscribers:     make(map[string]*model.User, 0),
+		subscribers:     make(map[string]*model.User),
 		subscribersLock: sync.RWMutex{},
 	}
 	return cache

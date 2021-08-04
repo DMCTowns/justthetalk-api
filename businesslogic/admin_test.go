@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
 
@@ -149,14 +150,17 @@ func TestSetUserStatus(t *testing.T) {
 		fieldMap := make(map[string]interface{})
 
 		var updated *model.User
+		var err error
 
 		fieldMap["isWatch"] = false
-		updated = SetUserStatus(targetUser, fieldMap, adminUser, userCache, db)
+		updated, err = SetUserStatus(targetUser, fieldMap, adminUser, userCache, db)
+		assert.NoError(t, err)
 		if updated.IsWatch {
 			t.Error("Unexpected: isWatch")
 		}
 		fieldMap["isWatch"] = true
-		updated = SetUserStatus(targetUser, fieldMap, adminUser, userCache, db)
+		updated, err = SetUserStatus(targetUser, fieldMap, adminUser, userCache, db)
+		assert.NoError(t, err)
 		if !updated.IsWatch {
 			t.Error("Unexpected: isWatch")
 		}

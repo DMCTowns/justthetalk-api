@@ -19,7 +19,6 @@ import (
 	"justthetalk/connections"
 	"justthetalk/model"
 	"justthetalk/utils"
-	"sync"
 	"time"
 
 	"gorm.io/gorm"
@@ -29,7 +28,6 @@ type FolderCache struct {
 	entries       []*model.Folder
 	byId          map[uint]*model.Folder
 	updateChannel chan *model.Post
-	mutex         sync.Mutex
 }
 
 func NewFolderCache() *FolderCache {

@@ -169,9 +169,7 @@ func TestGetOtherUser(t *testing.T) {
 		user := GetOtherUser(userId, db, userCache)
 		if user == nil {
 			t.Error("Failed to get user")
-		}
-
-		if !(user.UserId == 50 && user.Username == "johnnythesailor") {
+		} else if !(user.UserId == 50 && user.Username == "johnnythesailor") {
 			t.Error("Details invalid")
 		}
 	})
@@ -425,6 +423,7 @@ func TestValidatePasswordResetKeySuccess(t *testing.T) {
 		request := ForgotPassword(&credentials, "8.8.8.8", userCache, db)
 		if request == nil {
 			t.Error("user not found")
+			return
 		}
 
 		user, _ := ValidatePasswordResetKey(request.ResetKey, userCache, db)
@@ -544,6 +543,7 @@ func TestUpdateUserPasswordWithKeySuccess(t *testing.T) {
 		request := ForgotPassword(&credentials, "8.8.8.8", userCache, db)
 		if request == nil {
 			t.Error("user not found")
+			return
 		}
 		t.Logf("Reset key: %s", request.ResetKey)
 
