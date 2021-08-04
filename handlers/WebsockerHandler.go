@@ -320,9 +320,16 @@ func (client *websocketClient) hello(accessToken string) {
 	defer func() {
 		if r := recover(); r != nil {
 			err := r.(error)
-			client.writeQueue <- "nack!"
-			log.Debugf("%v", err)
+			log.Errorf("%v", err)
 			debug.PrintStack()
+		}
+	}()
+
+	defer func() {
+		if r := recover(); r != nil {
+			if !client.hasQuit {
+				client.writeQueue <- "nack!"
+			}
 		}
 		log.Debug("Closing pubsub reader")
 	}()
