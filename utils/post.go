@@ -75,7 +75,7 @@ func NewPostFormatter() *PostFormatter {
 				formatFn: formatIndent,
 			},
 			{
-				re:       regexp.MustCompile(`^\}$`),
+				re:       regexp.MustCompile(`^\} .+`),
 				formatFn: formatLinebreak,
 			},
 			{
