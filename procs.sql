@@ -1398,12 +1398,12 @@ BEGIN
         $last_post_id);
     end if;
 
-    if $post_status = 0 or $post_status = 3 then
+    if $post_status = 0 or $post_status = 3 or $post_status = 4 then
 
         delete from front_page_entry where discussion_id = $discussion_id;
 
         insert into front_page_entry (version, discussion_id, discussion_name, zorder, folder_id, folder_key, folder_name, last_post, last_post_id, post_count, admin_only)
-        select 0, d.id, d.title, d.zorder, d.folder_id, f.folder_key, f.description, d.last_post, d.last_post_id , d.post_count, case when f.type  = 3 then 1 else 0 end
+        select 0, d.id, d.title, d.zorder, d.folder_id, f.folder_key, f.description, $current_timestamp, $last_post_id, $post_num, case when f.type  = 3 then 1 else 0 end
         from discussion  d
         inner join folder f
         on d.folder_id = f.id
