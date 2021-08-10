@@ -168,11 +168,16 @@ func DeleteDiscussion(folder *model.Folder, discussion *model.Discussion, user *
 
 }
 
-func GetPosts(folder *model.Folder, discussion *model.Discussion, user *model.User, pageStart int, pageSize int, db *gorm.DB) []*model.Post {
+func GetPosts(folder *model.Folder, discussion *model.Discussion, user *model.User, pageStart int64, pageSize int, db *gorm.DB) []*model.Post {
 
 	posts := make([]*model.Post, 0)
 
-	if result := db.Raw("call get_discussion_posts(?, ?, ?, ?)", folder.Id, discussion.Id, pageStart, pageSize).Scan(&posts); result.Error != nil {
+	userId := 0
+	if user != nil {
+		userId = int(user.Id)
+	}
+
+	if result := db.Raw("call get_discussion_posts(?, ?, ?, ?, ?)", userId, folder.Id, discussion.Id, pageStart, pageSize).Scan(&posts); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 

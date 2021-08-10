@@ -292,12 +292,12 @@ func (h *UserHandler) UpdateDiscussionBookmark(res http.ResponseWriter, req *htt
 		discussionId := utils.ExtractVarInt("discussionId", req)
 		discussion := h.discussionCache.Get(discussionId, user)
 
-		var nextBookmark model.UserDiscussionBookmark
-		if err := json.NewDecoder(req.Body).Decode(&nextBookmark); err != nil {
+		var lastPost model.Post
+		if err := json.NewDecoder(req.Body).Decode(&lastPost); err != nil {
 			utils.PanicWithWrapper(err, utils.ErrBadRequest)
 		}
 
-		currentBookmark := businesslogic.UpdateDiscussionBookmark(user, discussion, &nextBookmark, h.userCache, db)
+		currentBookmark := businesslogic.UpdateDiscussionBookmark(user, discussion, &lastPost, db)
 		return http.StatusOK, currentBookmark, ""
 
 	})

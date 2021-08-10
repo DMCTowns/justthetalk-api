@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
 
@@ -561,6 +562,42 @@ func TestUpdateUserPasswordWithKeySuccess(t *testing.T) {
 		if deletedRequest.Id > 0 {
 			t.Error("Reset key not deleted")
 		}
+
+	})
+
+}
+
+func TestGetDiscussionBookmark(t *testing.T) {
+
+	assert := assert.New(t)
+
+	userCache := NewUserCache()
+	folderCache := NewFolderCache()
+	discussionCache := NewDiscussionCache(folderCache)
+
+	connections.WithDatabase(30*time.Second, func(db *gorm.DB) {
+
+		t.Run("no bookmark for nil user", func(t *testing.T) {
+			discussion := discussionCache.UnsafeGet(2494)
+			bookmark := GetDiscussionBookmark(nil, discussion, db)
+			assert.Nil(bookmark)
+		})
+
+		t.Run("bookmark for user that exists", func(t *testing.T) {
+			user := userCache.Get(50)
+			discussion := discussionCache.UnsafeGet(33785)
+			bookmark := GetDiscussionBookmark(user, discussion, db)
+			if assert.NotNil(bookmark) {
+				assert.NotZero(bookmark.Id)
+			}
+		})
+
+		t.Run("no bookmark for user on unread discussion", func(t *testing.T) {
+			user := userCache.Get(50)
+			discussion := discussionCache.UnsafeGet(110)
+			bookmark := GetDiscussionBookmark(user, discussion, db)
+			assert.Nil(bookmark)
+		})
 
 	})
 

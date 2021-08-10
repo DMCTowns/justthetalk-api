@@ -35,6 +35,10 @@ func ExtractPageSizeAndStart(req *http.Request) (int, int) {
 
 }
 
+func ExtractQueryInt64(param string, req *http.Request) int64 {
+	return int64(ExtractQueryInt(param, req))
+}
+
 func ExtractQueryInt(param string, req *http.Request) int {
 	value := 0
 	paramValue := req.URL.Query().Get(param)

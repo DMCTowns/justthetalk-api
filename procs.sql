@@ -252,8 +252,23 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS get_discussion_posts;
 DELIMITER //
-CREATE PROCEDURE get_discussion_posts(IN $folder_id bigint, IN $discussion_id bigint, IN $page_start int, IN $page_size int)
+CREATE PROCEDURE get_discussion_posts(IN $user_id int, IN $folder_id bigint, IN $discussion_id bigint, IN $requested_start int, IN $page_size int)
 BEGIN
+
+	declare $page_start int;
+
+    select $requested_start into $page_start;
+
+    if coalesce($page_start, 0) = 0 then
+		select last_post_count into $page_start
+		from user_discussion
+		where user_id = $user_id
+		and discussion_id = $discussion_id;
+	end if;
+
+    if coalesce($page_start, 0) = 0 then
+		select 1 into $page_start;
+	end if;
 
     select p.id,
     p.version,
@@ -893,6 +908,19 @@ BEGIN
     select *
     from user_discussion
     where user_id = $user_id;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_user_discussion_bookmark;
+DELIMITER //
+CREATE PROCEDURE get_user_discussion_bookmark(IN $user_id bigint, IN $discussion_id bigint)
+BEGIN
+
+    select *
+    from user_discussion
+    where user_id = $user_id
+    and discussion_id = $discussion_id;
 
 END //
 DELIMITER ;

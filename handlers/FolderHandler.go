@@ -231,25 +231,12 @@ func (h *FolderHandler) GetPosts(res http.ResponseWriter, req *http.Request) {
 		folder := h.folderCache.Get(folderId, user)
 		discussion := h.discussionCache.Get(discussionId, user)
 
-		var lastBookmark *model.UserDiscussionBookmark
-		if user != nil {
-			lastBookmark = h.userCache.GetBookmark(user, discussion)
+		pageSize := utils.ExtractQueryInt("size", req)
+		if pageSize == 0 {
+			pageSize = 20
 		}
 
-		pageSize := 0
-		pageStart := 1
-
-		startParam := req.URL.Query().Get("start")
-		if len(startParam) > 0 {
-			pageStart = utils.ExtractQueryInt("start", req)
-		} else if lastBookmark != nil {
-			pageStart = int(lastBookmark.LastPostCount)
-		}
-
-		if pageStart < pageSize {
-			pageStart = 0
-		}
-
+		pageStart := utils.ExtractQueryInt64("start", req)
 		pageSize = utils.ExtractQueryInt("size", req)
 
 		posts := businesslogic.GetPosts(folder, discussion, user, pageStart, pageSize, db)
@@ -278,12 +265,12 @@ func (h *FolderHandler) CreatePost(res http.ResponseWriter, req *http.Request) {
 
 		returnPostsFromPostNum := created.PostNum
 
-		lastBookmark := h.userCache.GetBookmark(user, discussion)
+		lastBookmark := businesslogic.GetDiscussionBookmark(user, discussion, db)
 		if lastBookmark != nil {
 			returnPostsFromPostNum = lastBookmark.LastPostCount + 1
 		}
 
-		posts := businesslogic.GetPosts(folder, discussion, user, int(returnPostsFromPostNum), 20, db)
+		posts := businesslogic.GetPosts(folder, discussion, user, returnPostsFromPostNum, 20, db)
 
 		postCount.WithLabelValues(folder.Key).Inc()
 

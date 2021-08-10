@@ -589,25 +589,34 @@ func UpdateBio(user *model.User, bio string, userCache *UserCache, db *gorm.DB) 
 
 }
 
-func UpdateDiscussionBookmark(user *model.User, discussion *model.Discussion, nextBookmark *model.UserDiscussionBookmark, userCache *UserCache, db *gorm.DB) *model.UserDiscussionBookmark {
+func GetDiscussionBookmark(user *model.User, discussion *model.Discussion, db *gorm.DB) *model.UserDiscussionBookmark {
 
-	lastBookmark := userCache.GetBookmark(user, discussion)
-	if lastBookmark == nil || nextBookmark.LastPostCount > lastBookmark.LastPostCount {
+	var bookmark model.UserDiscussionBookmark
 
-		nextBookmark.DiscussionId = discussion.Id
-		nextBookmark.UserId = user.Id
-
-		if result := db.Raw("call update_user_bookmark(?, ?, ?, ?, ?)", nextBookmark.UserId, nextBookmark.DiscussionId, nextBookmark.LastPostId, nextBookmark.LastPostCount, nextBookmark.LastPostDate).First(nextBookmark); result.Error != nil {
-			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-		}
-
-		userCache.PutBookmark(nextBookmark)
-
-		return nextBookmark
-
-	} else {
-		return lastBookmark
+	if user == nil {
+		return nil
 	}
+
+	if result := db.Raw("call get_user_discussion_bookmark(?, ?)", user.Id, discussion.Id).First(&bookmark); result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil
+		}
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	return &bookmark
+
+}
+
+func UpdateDiscussionBookmark(user *model.User, discussion *model.Discussion, post *model.Post, db *gorm.DB) *model.UserDiscussionBookmark {
+
+	var nextBookmark model.UserDiscussionBookmark
+
+	if result := db.Raw("call update_user_bookmark(?, ?, ?, ?, ?)", user.Id, discussion.Id, post.Id, post.PostNum, post.CreatedDate).First(&nextBookmark); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	return &nextBookmark
 
 }
 
@@ -616,8 +625,6 @@ func DeleteDiscussionBookmark(user *model.User, discussion *model.Discussion, us
 	if result := db.Exec("call delete_user_bookmark(?, ?)", user.Id, discussion.Id); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
-
-	userCache.FlushBookmark(user, discussion)
 
 }
 
