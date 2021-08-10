@@ -19,9 +19,11 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
+	gorillahandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
 	"justthetalk/businesslogic"
@@ -250,7 +252,7 @@ func (a *App) Serve() {
 	a.postProcessor.Run()
 
 	log.Info("Serving requests...")
-	if err := http.ListenAndServe(":8080", a.router); err != nil {
+	if err := http.ListenAndServe(":8080", gorillahandlers.CombinedLoggingHandler(os.Stdout, a.router)); err != nil {
 		log.Errorf("%v", err)
 		log.Error("HTTP Server terminated")
 	}

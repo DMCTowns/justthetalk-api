@@ -7,6 +7,7 @@ require (
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20210506154932-f741c073f324
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/google/uuid v1.2.0
+	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/gosimple/slug v1.9.0
