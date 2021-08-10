@@ -28,6 +28,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -142,6 +143,7 @@ func (cache *UserCache) RotateRefreshToken(user *model.User) string {
 func (cache *UserCache) GetUserIdForRefreshToken(refreshToken string) uint {
 	tokenKey := "T" + refreshToken
 	if result := connections.RedisConnection().Get(context.Background(), tokenKey); result.Err() != nil {
+		log.Errorf("fetching cached refresh token: %v", result.Err())
 		panic(utils.ErrForbidden)
 	} else {
 		if val, err := result.Int64(); err == nil {

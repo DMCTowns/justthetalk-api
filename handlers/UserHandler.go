@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 
 	"justthetalk/businesslogic"
@@ -127,6 +128,7 @@ func (h *UserHandler) RefreshToken(res http.ResponseWriter, req *http.Request) {
 
 		var refreshToken string
 		if refreshTokenCookie, err := req.Cookie("refresh-token"); err != nil {
+			log.Errorf("fetching refresh token cookie: %v", err)
 			panic(utils.ErrBadRequest)
 		} else {
 			refreshToken = refreshTokenCookie.Value
