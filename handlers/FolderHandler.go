@@ -231,13 +231,12 @@ func (h *FolderHandler) GetPosts(res http.ResponseWriter, req *http.Request) {
 		folder := h.folderCache.Get(folderId, user)
 		discussion := h.discussionCache.Get(discussionId, user)
 
+		pageStart := utils.ExtractQueryInt64("start", req)
+
 		pageSize := utils.ExtractQueryInt("size", req)
 		if pageSize == 0 {
 			pageSize = 20
 		}
-
-		pageStart := utils.ExtractQueryInt64("start", req)
-		pageSize = utils.ExtractQueryInt("size", req)
 
 		posts := businesslogic.GetPosts(folder, discussion, user, pageStart, pageSize, db)
 
