@@ -52,6 +52,15 @@ func ExtractQueryInt(param string, req *http.Request) int {
 	return value
 }
 
+func ExtractQueryString(param string, req *http.Request) string {
+	value := ""
+	paramValue := req.URL.Query().Get(param)
+	if len(paramValue) > 0 {
+		value = paramValue
+	}
+	return value
+}
+
 func ExtractVarString(param string, req *http.Request) string {
 
 	value := ""
