@@ -539,7 +539,7 @@ func (h *UserHandler) ValidatePasswordResetKey(res http.ResponseWriter, req *htt
 func (h *UserHandler) ValidateSignupConfirmationKey(res http.ResponseWriter, req *http.Request) {
 	utils.AnonymousHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, db *gorm.DB) (int, interface{}, string) {
 
-		confirmationKey := req.URL.Query().Get("key")
+		confirmationKey := utils.ExtractVarString("key", req)
 		if len(confirmationKey) == 0 {
 			panic(utils.ErrBadRequest)
 		}
