@@ -21,6 +21,7 @@ import (
 	"justthetalk/model"
 	"justthetalk/utils"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -46,6 +47,12 @@ var (
 		Name: "justthetalk_active_websocket_count",
 		Help: "Count of active websockets",
 	})
+	validOrigins = map[string]bool{
+		"https://beta.justthetalk.com.": true,
+		"https://beta.justthetalk.com":  true,
+		"https://justthetalk.com.":      true,
+		"https://justthetalk.com":       true,
+	}
 )
 
 type websocketClient struct {
@@ -58,22 +65,22 @@ type websocketClient struct {
 }
 
 type WebsockerHandler struct {
-	userCache *businesslogic.UserCache
-	upgrader  websocket.Upgrader
+	userCache    *businesslogic.UserCache
+	upgrader     websocket.Upgrader
+	isProduction bool
 }
 
 func NewWebsockerHandler(userCache *businesslogic.UserCache) *WebsockerHandler {
+
+	platform := os.Getenv(utils.PlatformEnvVar)
 
 	websockerHandler := &WebsockerHandler{
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			CheckOrigin: func(r *http.Request) bool {
-				log.Info(r.Header.Get("Origin"))
-				return true
-			},
 		},
-		userCache: userCache,
+		userCache:    userCache,
+		isProduction: (platform == utils.Production),
 	}
 
 	websockerHandler.upgrader.CheckOrigin = websockerHandler.checkOrigin
@@ -87,8 +94,15 @@ func (h *WebsockerHandler) Close() {
 }
 
 func (h *WebsockerHandler) checkOrigin(req *http.Request) bool {
-	origin := req.Header.Get("Origin")
-	return strings.HasSuffix(origin, ".justthetalk.com")
+	if !h.isProduction {
+		return true
+	}
+	origin := req.Header.Get(utils.HeaderOrigin)
+	_, exists := validOrigins[origin]
+	if !exists {
+		log.Errorf("invalid websocket origin: %s", origin)
+	}
+	return exists
 }
 
 func (h *WebsockerHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {

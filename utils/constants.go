@@ -28,6 +28,7 @@ const HeaderAccessControlAllowCredentials = "Access-Control-Allow-Credentials"
 const HeaderAccessControlAllowHeaders = "Access-Control-Allow-Headers"
 const HeaderAccessControlAllowMethods = "Access-Control-Allow-Methods"
 const HeaderVary = "Vary"
+const HeaderOrigin = "Origin"
 
 const HeaderContentType = "Content-Type"
 const HeaderCacheControl = "Cache-Control"
