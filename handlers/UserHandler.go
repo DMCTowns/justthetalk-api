@@ -31,19 +31,21 @@ import (
 )
 
 type UserHandler struct {
-	userCache       *businesslogic.UserCache
-	folderCache     *businesslogic.FolderCache
-	discussionCache *businesslogic.DiscussionCache
-	emailRegex      *regexp.Regexp
+	userCache        *businesslogic.UserCache
+	folderCache      *businesslogic.FolderCache
+	discussionCache  *businesslogic.DiscussionCache
+	emailRegex       *regexp.Regexp
+	useSecureCookies bool
 }
 
-func NewUserHandler(userCache *businesslogic.UserCache, folderCache *businesslogic.FolderCache, discussionCache *businesslogic.DiscussionCache) *UserHandler {
+func NewUserHandler(platform string, userCache *businesslogic.UserCache, folderCache *businesslogic.FolderCache, discussionCache *businesslogic.DiscussionCache) *UserHandler {
 
 	return &UserHandler{
-		userCache:       userCache,
-		folderCache:     folderCache,
-		discussionCache: discussionCache,
-		emailRegex:      regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"),
+		userCache:        userCache,
+		folderCache:      folderCache,
+		discussionCache:  discussionCache,
+		emailRegex:       regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"),
+		useSecureCookies: (platform == utils.Production),
 	}
 
 }
@@ -137,14 +139,16 @@ func (h *UserHandler) RefreshToken(res http.ResponseWriter, req *http.Request) {
 		userId := h.userCache.GetUserIdForRefreshToken(refreshToken)
 		tokenUser := h.userCache.Get(userId)
 
+		expiryTime := time.Now().Add(time.Hour * 720)
 		refreshToken = h.userCache.RotateRefreshToken(tokenUser)
 		cookie := &http.Cookie{
 			Name:     "refresh-token",
 			Path:     "/",
 			Value:    refreshToken,
 			HttpOnly: true,
+			Secure:   h.useSecureCookies,
 			SameSite: http.SameSiteStrictMode,
-			Expires:  time.Now().Add(time.Hour * 720),
+			Expires:  expiryTime,
 		}
 
 		http.SetCookie(res, cookie)

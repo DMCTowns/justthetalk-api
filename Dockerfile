@@ -19,6 +19,7 @@ ENV DB_HOST=localhost
 ENV DB_PORT=3306
 ENV REDIS_HOST=localhost
 ENV REDIS_PORT=6379
+ENV PLATFORM=PRODUCTION
 
 RUN mkdir -p /go/src/justthetalk
 WORKDIR /go/src/justthetalk

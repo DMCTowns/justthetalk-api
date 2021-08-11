@@ -15,6 +15,10 @@
 
 package utils
 
+const PlatformEnvVar = "PLATFORM"
+const Production = "PRODUCTION"
+const Development = "DEVELOPMENT"
+
 const ContextDbKey = "DB"
 const ContextUserKey = "User"
 const ContextRedisKey = "Redis"

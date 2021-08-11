@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -27,6 +28,7 @@ import (
 	"justthetalk/businesslogic"
 	"justthetalk/handlers"
 	"justthetalk/middleware"
+	"justthetalk/utils"
 
 	"sync"
 
@@ -105,6 +107,8 @@ func NewApp() *App {
 
 func (a *App) configureRouter() *mux.Router {
 
+	platform := os.Getenv(utils.PlatformEnvVar)
+
 	databaseMiddleware := middleware.NewDatabaseMiddleware()
 	sessionMiddleware := middleware.NewSessionMiddleware(a.userCache)
 
@@ -113,7 +117,7 @@ func (a *App) configureRouter() *mux.Router {
 
 	a.configureFolderRouter(router)
 	a.configureFrontPageRouter(router)
-	a.configureUserRouter(router)
+	a.configureUserRouter(router, platform)
 	a.configureSearchRouter(router)
 	a.configureAdminRouter(router)
 
@@ -170,9 +174,9 @@ func (a *App) configureSearchRouter(router *mux.Router) {
 
 }
 
-func (a *App) configureUserRouter(router *mux.Router) {
+func (a *App) configureUserRouter(router *mux.Router, platform string) {
 
-	userHandler := handlers.NewUserHandler(a.userCache, a.folderCache, a.discussionCache)
+	userHandler := handlers.NewUserHandler(platform, a.userCache, a.folderCache, a.discussionCache)
 
 	userRouter := router.PathPrefix("/user").Subrouter().StrictSlash(false)
 	userRouter.HandleFunc("", userHandler.GetUser).Methods(http.MethodGet, http.MethodOptions)
