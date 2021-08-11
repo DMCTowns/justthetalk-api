@@ -68,6 +68,10 @@ func NewWebsockerHandler(userCache *businesslogic.UserCache) *WebsockerHandler {
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				log.Info(r.Header.Get("Origin"))
+				return true
+			},
 		},
 		userCache: userCache,
 	}
