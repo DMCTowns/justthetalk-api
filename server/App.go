@@ -174,8 +174,6 @@ func (a *App) configureUserRouter(router *mux.Router) {
 
 	userHandler := handlers.NewUserHandler(a.userCache, a.folderCache, a.discussionCache)
 
-	router.HandleFunc("/confirm/{key}", userHandler.ValidateSignupConfirmationKey).Methods(http.MethodGet, http.MethodOptions)
-
 	userRouter := router.PathPrefix("/user").Subrouter().StrictSlash(false)
 	userRouter.HandleFunc("", userHandler.GetUser).Methods(http.MethodGet, http.MethodOptions)
 	userRouter.HandleFunc("/{userId}", userHandler.GetOtherUser).Methods(http.MethodGet, http.MethodOptions)
@@ -191,6 +189,7 @@ func (a *App) configureUserRouter(router *mux.Router) {
 	userRouter.HandleFunc("/viewtype", userHandler.UpdateViewType).Methods(http.MethodPut, http.MethodOptions)
 	userRouter.HandleFunc("/forgotpassword", userHandler.ForgotPassword).Methods(http.MethodPost, http.MethodOptions)
 	userRouter.HandleFunc("/password/validatekey", userHandler.ValidatePasswordResetKey).Methods(http.MethodGet, http.MethodOptions)
+	userRouter.HandleFunc("/account/confirm", userHandler.ValidateSignupConfirmationKey).Methods(http.MethodGet, http.MethodOptions)
 
 	userRouter.HandleFunc("/discussion/{discussionId:[0-9]+}/bookmark", userHandler.DeleteDiscussionBookmark).Methods(http.MethodDelete, http.MethodOptions)
 	userRouter.HandleFunc("/discussion/{discussionId:[0-9]+}/bookmark", userHandler.UpdateDiscussionBookmark).Methods(http.MethodPut, http.MethodOptions)
