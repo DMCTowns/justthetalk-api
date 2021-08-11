@@ -29,6 +29,8 @@ const HeaderAccessControlAllowHeaders = "Access-Control-Allow-Headers"
 const HeaderAccessControlAllowMethods = "Access-Control-Allow-Methods"
 const HeaderVary = "Vary"
 const HeaderOrigin = "Origin"
+const HeaderXForwardedFor = "X-Forwarded-For"
+const HeaderXRealIP = "X-Real-IP"
 
 const HeaderContentType = "Content-Type"
 const HeaderCacheControl = "Cache-Control"

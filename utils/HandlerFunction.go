@@ -162,6 +162,10 @@ func SendRespsonse(statusCode int, responseData interface{}, message string, res
 }
 
 func ExtractIPAdress(req *http.Request) string {
+	realIP := req.Header.Get(HeaderXRealIP)
+	if len(realIP) > 0 {
+		return realIP
+	}
 	host, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
 		host = req.RemoteAddr
