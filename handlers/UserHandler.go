@@ -19,7 +19,6 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -89,7 +88,7 @@ func (h *UserHandler) Login(res http.ResponseWriter, req *http.Request) {
 			panic(utils.ErrBadRequest)
 		}
 
-		user := businesslogic.ValidateUserLogin(credentials, req.RemoteAddr, db, h.userCache)
+		user := businesslogic.ValidateUserLogin(credentials, utils.ExtractIPAdress(req), db, h.userCache)
 
 		responseData, cookie := h.sendUserWithNewAccessToken(user)
 		http.SetCookie(res, cookie)
@@ -118,7 +117,7 @@ func (h *UserHandler) Logout(res http.ResponseWriter, req *http.Request) {
 
 		http.SetCookie(res, cookie)
 
-		businesslogic.CreateLoginHistory("logout", user, req.RemoteAddr, db)
+		businesslogic.CreateLoginHistory("logout", user, utils.ExtractIPAdress(req), db)
 
 		return http.StatusOK, nil, "User logged out"
 
@@ -338,7 +337,7 @@ func (h *UserHandler) CreateReport(res http.ResponseWriter, req *http.Request) {
 			panic(utils.ErrBadRequest)
 		}
 
-		reportData.IPAddress = strings.Split(req.RemoteAddr, ":")[0]
+		reportData.IPAddress = utils.ExtractIPAdress(req)
 
 		businesslogic.CreateReport(&reportData, h.userCache, db)
 
@@ -367,7 +366,7 @@ func (h *UserHandler) CreateUser(res http.ResponseWriter, req *http.Request) {
 			utils.PanicWithWrapper(utils.ErrBadRequest, err)
 		}
 
-		user := businesslogic.CreateUser(&credentials, req.RemoteAddr, db)
+		user := businesslogic.CreateUser(&credentials, utils.ExtractIPAdress(req), db)
 
 		responseData, cookie := h.sendUserWithNewAccessToken(user)
 		http.SetCookie(res, cookie)
@@ -512,7 +511,7 @@ func (h *UserHandler) ForgotPassword(res http.ResponseWriter, req *http.Request)
 			utils.PanicWithWrapper(utils.ErrBadRequest, err)
 		}
 
-		request := businesslogic.ForgotPassword(&credentials, req.RemoteAddr, h.userCache, db)
+		request := businesslogic.ForgotPassword(&credentials, utils.ExtractIPAdress(req), h.userCache, db)
 
 		if request != nil {
 			return http.StatusOK, nil, "Request accepted"
@@ -548,7 +547,7 @@ func (h *UserHandler) ValidateSignupConfirmationKey(res http.ResponseWriter, req
 			panic(utils.ErrBadRequest)
 		}
 
-		user := businesslogic.ValidateSignupConfirmationKey(confirmationKey, req.RemoteAddr, h.userCache, db)
+		user := businesslogic.ValidateSignupConfirmationKey(confirmationKey, utils.ExtractIPAdress(req), h.userCache, db)
 
 		responseData, cookie := h.sendUserWithNewAccessToken(user)
 		http.SetCookie(res, cookie)

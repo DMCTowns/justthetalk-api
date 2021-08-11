@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"justthetalk/model"
+	"net"
 	"net/http"
 
 	"runtime/debug"
@@ -158,4 +159,12 @@ func SendRespsonse(statusCode int, responseData interface{}, message string, res
 		PanicWithWrapper(err, ErrInternalError)
 	}
 
+}
+
+func ExtractIPAdress(req *http.Request) string {
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		host = req.RemoteAddr
+	}
+	return host
 }

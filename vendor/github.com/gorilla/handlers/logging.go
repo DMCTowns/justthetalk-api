@@ -6,6 +6,7 @@ package handlers
 
 import (
 	"io"
+	"justthetalk/utils"
 	"net"
 	"net/http"
 	"net/url"
@@ -149,9 +150,9 @@ func buildCommonLogLine(req *http.Request, url url.URL, ts time.Time, status int
 		}
 	}
 
-	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	host, _, err := net.SplitHostPort(utils.ExtractIPAdress(req))
 	if err != nil {
-		host = req.RemoteAddr
+		host = utils.ExtractIPAdress(req)
 	}
 
 	uri := req.RequestURI

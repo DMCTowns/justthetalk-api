@@ -67,7 +67,7 @@ func (h *SearchHandler) SearchPosts(res http.ResponseWriter, req *http.Request) 
 		}
 
 		if len(query) > 0 {
-			results := businesslogic.SearchPosts(query, size, start, user, req.RemoteAddr, h.folderCache, h.discussionCache, db, req.Context())
+			results := businesslogic.SearchPosts(query, size, start, user, utils.ExtractIPAdress(req), h.folderCache, h.discussionCache, db, req.Context())
 			return http.StatusOK, results, ""
 		} else {
 			panic(utils.ErrBadRequest)
