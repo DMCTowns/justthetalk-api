@@ -147,7 +147,7 @@ func (h *UserHandler) RefreshToken(res http.ResponseWriter, req *http.Request) {
 			Value:    refreshToken,
 			HttpOnly: true,
 			Secure:   h.useSecureCookies,
-			SameSite: http.SameSiteStrictMode,
+			SameSite: http.SameSiteNoneMode,
 			Expires:  expiryTime,
 		}
 
