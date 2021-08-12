@@ -547,7 +547,10 @@ func (h *UserHandler) ValidateSignupConfirmationKey(res http.ResponseWriter, req
 			panic(utils.ErrBadRequest)
 		}
 
-		user := businesslogic.ValidateSignupConfirmationKey(confirmationKey, utils.ExtractIPAdress(req), h.userCache, db)
+		user, err := businesslogic.ValidateSignupConfirmationKey(confirmationKey, utils.ExtractIPAdress(req), h.userCache, db)
+		if err != nil {
+			panic(err)
+		}
 
 		responseData, cookie := h.sendUserWithNewAccessToken(user)
 		http.SetCookie(res, cookie)

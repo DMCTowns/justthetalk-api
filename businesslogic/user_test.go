@@ -92,10 +92,35 @@ func TestCreateUser(t *testing.T) {
 
 func TestConfirmUser(t *testing.T) {
 
+	assert := assert.New(t)
+
 	key := "50926866-aa8b-4751-b173-ae57b3d9eb7f"
 	userCache := NewUserCache()
-	connections.WithDatabase(60*time.Second, func(db *gorm.DB) {
-		ValidateSignupConfirmationKey(key, "8.8.8.8", userCache, db)
+	connections.WithDatabase(300*time.Second, func(db *gorm.DB) {
+
+		t.Run("should fail if expired", func(t *testing.T) {
+			res := db.Exec("update signup_confirmation set created_date = date_add(now(), interval -7 day), ip_address = null where confirmation_key = ?;", key)
+			if assert.NoError(res.Error) {
+				_, err := ValidateSignupConfirmationKey(key, "8.8.8.8", userCache, db)
+				assert.ErrorIs(err, utils.ErrExpired)
+			}
+		})
+
+		t.Run("should succeed", func(t *testing.T) {
+			res := db.Exec("update signup_confirmation set created_date = date_add(now(), interval -1 day), ip_address = null where confirmation_key = ?;", key)
+			if assert.NoError(res.Error) {
+				user, err := ValidateSignupConfirmationKey(key, "8.8.8.8", userCache, db)
+				if assert.NoError(err) {
+					assert.Equal(uint(5533), user.Id)
+				}
+			}
+		})
+
+		t.Run("cannot be re-run", func(t *testing.T) {
+			_, err := ValidateSignupConfirmationKey(key, "8.8.8.8", userCache, db)
+			assert.ErrorIs(err, utils.ErrBadRequest)
+		})
+
 	})
 
 }

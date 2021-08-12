@@ -500,32 +500,32 @@ func UpdatePassword(user *model.User, updateData *model.UserOptionsUpdateData, u
 
 }
 
-func ValidateSignupConfirmationKey(key string, ipAddress string, userCache *UserCache, db *gorm.DB) *model.User {
+func ValidateSignupConfirmationKey(key string, ipAddress string, userCache *UserCache, db *gorm.DB) (*model.User, error) {
 
 	if _, err := uuid.Parse(key); err != nil {
-		panic(utils.ErrBadRequest)
+		return nil, utils.ErrBadRequest
 	}
 
 	var request model.SignupConfirmation
 
 	if result := db.Raw("call find_signup_confirmation_request(?)", key).Take(&request); result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			panic(utils.ErrBadRequest)
+			return nil, utils.ErrBadRequest
 		}
-		panic(result.Error)
+		return nil, result.Error
 	}
 
 	if request.CreatedDate.Add(72 * time.Hour).Before(time.Now()) {
-		panic(utils.ErrExpired)
+		return nil, utils.ErrExpired
 	}
 
 	// TODO - put this in a transaction
 	var user model.User
-	if result := db.Raw("call accept_signup_confirmation_request(?, ?)", request.Id, ipAddress).Take(&request); result.Error != nil {
+	if result := db.Raw("call accept_signup_confirmation_request(?, ?)", request.Id, ipAddress).Take(&user); result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			panic(utils.ErrBadRequest)
+			return nil, utils.ErrBadRequest
 		}
-		panic(result.Error)
+		return nil, result.Error
 	}
 
 	updatedUser := userCache.Reload(user.Id)
@@ -533,7 +533,7 @@ func ValidateSignupConfirmationKey(key string, ipAddress string, userCache *User
 	CreateUserHistory(model.UserHistoryAdminSignupConfirmed, ipAddress, &user, db)
 	CreateLoginHistory("new", &user, ipAddress, db)
 
-	return updatedUser
+	return updatedUser, nil
 
 }
 
