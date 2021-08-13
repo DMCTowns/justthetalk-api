@@ -130,6 +130,9 @@ func (h *UserHandler) RefreshToken(res http.ResponseWriter, req *http.Request) {
 		var refreshToken string
 		if refreshTokenCookie, err := req.Cookie("refresh-token"); err != nil {
 			log.Errorf("fetching refresh token cookie: %v", err)
+			if data, err := json.Marshal(req.Header); err != nil {
+				log.Info(string(data))
+			}
 			panic(utils.ErrBadRequest)
 		} else {
 			refreshToken = refreshTokenCookie.Value
