@@ -146,6 +146,7 @@ func (h *UserHandler) RefreshToken(res http.ResponseWriter, req *http.Request) {
 		cookie := &http.Cookie{
 			Name:     "refresh-token",
 			Path:     "/",
+			Domain:   "justthetalk.com",
 			Value:    refreshToken,
 			HttpOnly: true,
 			Secure:   h.useSecureCookies,
