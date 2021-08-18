@@ -985,6 +985,28 @@ BEGIN
 END //
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS get_frontpage_entry;
+DELIMITER //
+CREATE PROCEDURE get_frontpage_entry(IN $discussion_id int)
+BEGIN
+
+    select fp.discussion_id,
+    fp.discussion_name,
+    fp.folder_id,
+    fp.folder_key,
+    fp.folder_name,
+    fp.last_post,
+    fp.post_count,
+    fp.last_post_id,
+    null last_post_read_count,
+    null last_post_read_date,
+    null last_post_read_id
+    from front_page_entry fp
+    where fp.discussion_id = $discussion_id;
+
+END //
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS get_frontpage_latest;
 DELIMITER //
 CREATE PROCEDURE get_frontpage_latest(IN $user_id int, IN $is_admin int, IN $page_start int, IN $page_size int)

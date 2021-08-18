@@ -16,8 +16,11 @@
 package handlers
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"justthetalk/businesslogic"
+	"justthetalk/connections"
 	"justthetalk/model"
 	"justthetalk/utils"
 	"net/http"
@@ -28,7 +31,6 @@ import (
 	"runtime/debug"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 
@@ -115,20 +117,19 @@ func (h *WebsockerHandler) ServeHTTP(res http.ResponseWriter, req *http.Request)
 
 }
 
-func (h *WebsockerHandler) registerClient(client *websocketClient) *redis.PubSub {
-	if client.user != nil {
-		websocketGuage.Inc()
-		return h.userCache.AddSubscriber(client.user)
+func (h *WebsockerHandler) registerClient(client *websocketClient) {
+	if client.user == nil {
+		panic("no user")
 	}
-	return nil
+	websocketGuage.Inc()
+	h.userCache.AddSubscriber(client.user)
 }
 
 func (h *WebsockerHandler) unregisterClient(client *websocketClient) {
-	if client.user != nil {
-		websocketGuage.Dec()
-		h.userCache.RemoveSubscriber(client.user)
-		client.user = nil
+	if client.user == nil {
+		panic("no user")
 	}
+	h.userCache.RemoveSubscriber(client.user)
 }
 
 func (h *WebsockerHandler) findUser(userId uint) *model.User {
@@ -374,11 +375,23 @@ func (client *websocketClient) hello(accessToken string) {
 		panic(errors.New("user not found"))
 	}
 
-	subscription := client.handler.registerClient(client)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancelFn()
+
+	client.handler.registerClient(client)
+
+	topic := fmt.Sprintf("user:%d", client.user.Id)
+	subscription := connections.RedisConnection().Subscribe(ctx, topic)
 	if subscription == nil {
-		panic(errors.New("user is nil"))
+		panic(errors.New("subscription is nil"))
 	}
-	defer subscription.Close()
+
+	defer func() {
+		ctx, cancelFn := context.WithTimeout(context.Background(), time.Second)
+		defer cancelFn()
+		subscription.Unsubscribe(ctx)
+		subscription.Close()
+	}()
 
 	client.writeQueue <- "ack!"
 

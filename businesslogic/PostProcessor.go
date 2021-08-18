@@ -133,20 +133,33 @@ type subscribedUser struct {
 	UserId uint `gorm:"column:user_id"`
 }
 
-func (p *PostProcessor) DispatchToSubscribers(post *model.Post) {
+func (p *PostProcessor) DispatchToSubscribers(post *model.Post) (dispatchError error) {
 
 	connections.WithDatabase(5*time.Second, func(db *gorm.DB) {
 
 		defer func() {
 			if r := recover(); r != nil {
-				err := r.(error)
-				log.Error(err)
+				dispatchError = r.(error)
+				log.Error(dispatchError)
 				debug.PrintStack()
 			}
 		}()
 
-		if rows, err := db.Model(&subscribedUser{}).Raw("call get_subscribers_for_post(?)", post.Id).Rows(); err == nil {
+		var frontPageEntry model.FrontPageEntry
+		if result := db.Raw("call get_frontpage_entry(?)", post.DiscussionId).First(&frontPageEntry); result.Error != nil {
+			panic(result.Error)
+		}
 
+		var messageData string
+		if data, err := json.Marshal(frontPageEntry); err != nil {
+			panic(err)
+		} else {
+			messageData = string(data)
+		}
+
+		log.Debug(messageData)
+
+		if rows, err := db.Model(&subscribedUser{}).Raw("call get_subscribers_for_post(?)", post.Id).Rows(); err == nil {
 			defer rows.Close()
 
 			for rows.Next() {
@@ -156,19 +169,13 @@ func (p *PostProcessor) DispatchToSubscribers(post *model.Post) {
 					panic(err)
 				}
 
-				topic := fmt.Sprintf("user:%d", subscriber.UserId)
-				if p.userCache.IsActiveSubscriber(topic) {
+				if p.userCache.IsActiveSubscriber(subscriber.UserId) && subscriber.UserId != post.CreatedByUserId {
 
 					ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
 					defer cancelFn()
 
-					if data, err := json.Marshal(post); err == nil {
-						strData := string(data)
-						log.Debugf("Dispatching to: %s", topic)
-						connections.RedisConnection().Publish(ctx, topic, strData)
-					} else {
-						log.Error(err)
-					}
+					topic := fmt.Sprintf("user:%d", subscriber.UserId)
+					connections.RedisConnection().Publish(ctx, topic, messageData)
 
 				}
 
@@ -177,6 +184,8 @@ func (p *PostProcessor) DispatchToSubscribers(post *model.Post) {
 		}
 
 	})
+
+	return nil
 
 }
 

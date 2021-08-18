@@ -33,13 +33,13 @@ import (
 )
 
 type UserCache struct {
-	subscribers     map[string]*model.User
+	subscribers     map[uint]bool
 	subscribersLock sync.RWMutex
 }
 
 func NewUserCache() *UserCache {
 	cache := &UserCache{
-		subscribers:     make(map[string]*model.User),
+		subscribers:     make(map[uint]bool),
 		subscribersLock: sync.RWMutex{},
 	}
 	return cache
@@ -120,6 +120,7 @@ func (cache *UserCache) Flush(user *model.User) {
 }
 
 func (cache *UserCache) ClearRefreshToken(refreshToken string) {
+	log.Debugf("Clear refresh token '%s'", refreshToken)
 	tokenKey := "T" + refreshToken
 	status := connections.RedisConnection().Del(context.Background(), tokenKey)
 	if status.Err() != nil {
@@ -128,7 +129,7 @@ func (cache *UserCache) ClearRefreshToken(refreshToken string) {
 }
 
 func (cache *UserCache) RotateRefreshToken(user *model.User) string {
-
+	log.Debugf("Rotate refresh token for %d", user.Id)
 	refreshToken := uuid.NewString()
 	tokenKey := "T" + refreshToken
 	status := connections.RedisConnection().Set(context.Background(), tokenKey, strconv.Itoa(int(user.Id)), time.Hour*720)
@@ -141,6 +142,7 @@ func (cache *UserCache) RotateRefreshToken(user *model.User) string {
 }
 
 func (cache *UserCache) GetUserIdForRefreshToken(refreshToken string) uint {
+	log.Debugf("Get refresh token '%s'", refreshToken)
 	tokenKey := "T" + refreshToken
 	if result := connections.RedisConnection().Get(context.Background(), tokenKey); result.Err() != nil {
 		log.Errorf("fetching cached refresh token: %v", result.Err())
@@ -154,40 +156,30 @@ func (cache *UserCache) GetUserIdForRefreshToken(refreshToken string) uint {
 	}
 }
 
-func (cache *UserCache) AddSubscriber(user *model.User) *redis.PubSub {
-
-	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelFn()
-
-	topic := fmt.Sprintf("user:%d", user.Id)
-	subscription := connections.RedisConnection().Subscribe(ctx, topic)
+func (cache *UserCache) AddSubscriber(user *model.User) {
 
 	cache.subscribersLock.Lock()
 	defer cache.subscribersLock.Unlock()
 
-	cache.subscribers[topic] = user
-
-	return subscription
+	cache.subscribers[user.Id] = true
 
 }
 
 func (cache *UserCache) RemoveSubscriber(user *model.User) {
 
-	topic := fmt.Sprintf("user:%d", user.Id)
-
 	cache.subscribersLock.Lock()
 	defer cache.subscribersLock.Unlock()
 
-	delete(cache.subscribers, topic)
+	delete(cache.subscribers, user.Id)
 
 }
 
-func (cache *UserCache) IsActiveSubscriber(topic string) bool {
+func (cache *UserCache) IsActiveSubscriber(userId uint) bool {
 
 	cache.subscribersLock.RLock()
 	defer cache.subscribersLock.RUnlock()
 
-	_, exists := cache.subscribers[topic]
+	_, exists := cache.subscribers[userId]
 	return exists
 
 }

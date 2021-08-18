@@ -77,6 +77,31 @@ func TestPublishPostToSearchIndex(t *testing.T) {
 	p.Close()
 }
 
+func TestPublishPostRedis(t *testing.T) {
+
+	userCache := NewUserCache()
+	folderCache := NewFolderCache()
+	discussionCache := NewDiscussionCache(folderCache)
+
+	p := NewPostProcessor(userCache, folderCache, discussionCache)
+	p.Run()
+	if !p.IsRunning() {
+		t.Error("Failed to start")
+	}
+
+	connections.WithDatabase(10*time.Second, func(db *gorm.DB) {
+
+		var post model.Post
+		// normal
+		db.Raw("call get_post(?)", 446).First(&post)
+		err := p.DispatchToSubscribers(&post)
+		assert.NoError(t, err)
+
+	})
+
+	p.Close()
+}
+
 func TestDeletePostFromSearchIndex(t *testing.T) {
 
 	userCache := NewUserCache()
