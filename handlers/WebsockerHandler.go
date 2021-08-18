@@ -127,7 +127,8 @@ func (h *WebsockerHandler) registerClient(client *websocketClient) {
 
 func (h *WebsockerHandler) unregisterClient(client *websocketClient) {
 	if client.user == nil {
-		panic("no user")
+		log.Error("no user")
+		return
 	}
 	h.userCache.RemoveSubscriber(client.user)
 }
