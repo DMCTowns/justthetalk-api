@@ -97,6 +97,10 @@ func (m *SessionMiddleware) Middleware(next http.Handler) http.Handler {
 				panic(utils.ErrBadRequest)
 			}
 
+			if claims.Purpose != model.UserClaimPurposeAccessToken {
+				panic(utils.ErrBadRequest)
+			}
+
 			user := m.userCache.Get(claims.UserId)
 			if !(user != nil && user.Id == claims.UserId && !user.AccountLocked && user.Enabled) {
 				panic(utils.ErrForbidden)

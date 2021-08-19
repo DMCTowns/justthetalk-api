@@ -19,9 +19,11 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"sort"
+	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/dgrijalva/jwt-go"
 	"gorm.io/gorm"
 
 	"justthetalk/businesslogic"
@@ -62,7 +64,7 @@ func (h *UserHandler) sendUserWithNewAccessToken(user *model.User) (map[string]i
 
 	responseData := make(map[string]interface{})
 	responseData["user"] = user
-	responseData["accessToken"] = utils.CreateJWT(user)
+	responseData["accessToken"] = utils.CreateJWT(user, time.Now().Add(15*time.Minute), model.UserClaimPurposeAccessToken)
 
 	return responseData, cookie
 
@@ -108,28 +110,72 @@ func (h *UserHandler) Logout(res http.ResponseWriter, req *http.Request) {
 	})
 }
 
+func extractCookieHack(cookieHeader string) string {
+
+	refreshTokenCookies := []string{}
+
+	cookies := strings.Split(cookieHeader, ";")
+	for _, cookie := range cookies {
+		if strings.HasPrefix(strings.TrimSpace(cookie), "refresh-token") {
+			refreshTokenCookies = append(refreshTokenCookies, strings.Split(cookie, "=")[1])
+		}
+	}
+
+	if len(refreshTokenCookies) == 0 {
+		panic(utils.ErrBadRequest)
+	}
+
+	sort.Slice(refreshTokenCookies, func(i, j int) bool {
+		return len(refreshTokenCookies[i]) > len(refreshTokenCookies[j])
+	})
+
+	return refreshTokenCookies[0]
+
+}
+
 func (h *UserHandler) RefreshToken(res http.ResponseWriter, req *http.Request) {
 	utils.AnonymousHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, db *gorm.DB) (int, interface{}, string) {
 
-		var refreshToken string
-		if refreshTokenCookie, err := req.Cookie("refresh-token"); err != nil {
-			log.Errorf("fetching refresh token cookie: %v", err)
-			if data, err := json.Marshal(req.Header); err == nil {
-				log.Info(string(data))
-			}
+		// var refreshToken string
+		// if refreshTokenCookie, err := req.Cookie("refresh-token"); err != nil {
+		// 	log.Errorf("fetching refresh token cookie: %v", err)
+		// 	if data, err := json.Marshal(req.Header); err == nil {
+		// 		log.Info(string(data))
+		// 	}
+		// 	panic(utils.ErrBadRequest)
+		// } else {
+		// 	refreshToken = refreshTokenCookie.Value
+		// }
+		cookieHeader := req.Header.Get("Cookie")
+		if len(cookieHeader) == 0 {
 			panic(utils.ErrBadRequest)
-		} else {
-			refreshToken = refreshTokenCookie.Value
+		}
+		refreshToken := extractCookieHack(cookieHeader)
+
+		token, err := jwt.ParseWithClaims(refreshToken, &model.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+			return []byte(utils.SigningKey), nil
+		})
+
+		if err != nil {
+			panic(utils.ErrBadRequest)
 		}
 
-		userId := h.userCache.GetUserIdForRefreshToken(refreshToken)
-		tokenUser := h.userCache.Get(userId)
+		claims, ok := token.Claims.(*model.UserClaims)
+		if !ok {
+			panic(utils.ErrBadRequest)
+		}
 
-		cookie := h.createRefreshTokenCookie(tokenUser)
+		if claims.Purpose != model.UserClaimPurposeRefreshToken {
+			panic(utils.ErrBadRequest)
+		}
+
+		user := h.userCache.Get(claims.UserId)
+
+		cookie := h.createRefreshTokenCookie(user)
 		http.SetCookie(res, cookie)
 
 		responseData := make(map[string]interface{})
-		responseData["accessToken"] = utils.CreateJWT(tokenUser)
+		responseData["accessToken"] = utils.CreateJWT(user, time.Now().Add(15*time.Minute), model.UserClaimPurposeAccessToken)
 
 		return http.StatusOK, responseData, ""
 
@@ -539,16 +585,15 @@ func (h *UserHandler) ValidateSignupConfirmationKey(res http.ResponseWriter, req
 func (h *UserHandler) createRefreshTokenCookie(user *model.User) *http.Cookie {
 
 	expiryTime := time.Now().Add(time.Hour * 720)
-	refreshToken := h.userCache.RotateRefreshToken(user)
 
 	return &http.Cookie{
 		Name:     "refresh-token",
-		Path:     "/",
 		Domain:   "justthetalk.com",
-		Value:    refreshToken,
+		Path:     "/",
+		Value:    utils.CreateJWT(user, time.Now().Add(time.Hour*720), model.UserClaimPurposeRefreshToken),
 		HttpOnly: true,
 		Secure:   h.useSecureCookies,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: http.SameSiteStrictMode,
 		Expires:  expiryTime,
 	}
 
@@ -558,12 +603,12 @@ func (h *UserHandler) expiredRefreshTokenCookie() *http.Cookie {
 
 	return &http.Cookie{
 		Name:     "refresh-token",
-		Path:     "/",
 		Domain:   "justthetalk.com",
+		Path:     "/",
 		Value:    "",
 		HttpOnly: true,
 		Secure:   h.useSecureCookies,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: http.SameSiteStrictMode,
 		MaxAge:   0,
 	}
 

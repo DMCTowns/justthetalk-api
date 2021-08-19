@@ -123,8 +123,12 @@ type UserSidebandData struct {
 	DiscussionSubscriptions      map[uint]*UserDiscussionSubscription      `json:"discussionSubscriptions" gorm:"-"`
 }
 
+const UserClaimPurposeAccessToken = "a"
+const UserClaimPurposeRefreshToken = "p"
+
 type UserClaims struct {
-	UserId uint `json:"userId"`
+	UserId  uint   `json:"u"`
+	Purpose string `json:"p"`
 	jwt.StandardClaims
 }
 

@@ -38,12 +38,13 @@ type siteVerifyResponse struct {
 	ErrorCodes  []string  `json:"error-codes"`
 }
 
-func CreateJWT(user *model.User) string {
+func CreateJWT(user *model.User, expiresAt time.Time, purpose string) string {
 
 	claims := model.UserClaims{
-		UserId: user.Id,
+		UserId:  user.Id,
+		Purpose: purpose,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(15 * time.Minute).Unix(),
+			ExpiresAt: expiresAt.Unix(),
 			Issuer:    "justthetalk.com",
 		},
 	}
