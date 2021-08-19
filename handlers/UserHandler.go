@@ -58,15 +58,7 @@ func (h *UserHandler) GetUser(res http.ResponseWriter, req *http.Request) {
 
 func (h *UserHandler) sendUserWithNewAccessToken(user *model.User) (map[string]interface{}, *http.Cookie) {
 
-	refreshToken := h.userCache.RotateRefreshToken(user)
-	cookie := &http.Cookie{
-		Name:     "refresh-token",
-		Path:     "/",
-		Value:    refreshToken,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-		Expires:  time.Now().Add(time.Hour * 720),
-	}
+	cookie := h.createRefreshTokenCookie(user)
 
 	responseData := make(map[string]interface{})
 	responseData["user"] = user
@@ -106,15 +98,7 @@ func (h *UserHandler) Logout(res http.ResponseWriter, req *http.Request) {
 			h.userCache.Flush(user)
 		}
 
-		cookie := &http.Cookie{
-			Name:     "refresh-token",
-			Path:     "/",
-			Value:    "",
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
-			MaxAge:   -1,
-		}
-
+		cookie := h.expiredRefreshTokenCookie()
 		http.SetCookie(res, cookie)
 
 		businesslogic.CreateLoginHistory("logout", user, utils.ExtractIPAdress(req), db)
@@ -141,19 +125,7 @@ func (h *UserHandler) RefreshToken(res http.ResponseWriter, req *http.Request) {
 		userId := h.userCache.GetUserIdForRefreshToken(refreshToken)
 		tokenUser := h.userCache.Get(userId)
 
-		expiryTime := time.Now().Add(time.Hour * 720)
-		refreshToken = h.userCache.RotateRefreshToken(tokenUser)
-		cookie := &http.Cookie{
-			Name:     "refresh-token",
-			Path:     "/",
-			Domain:   "justthetalk.com",
-			Value:    refreshToken,
-			HttpOnly: true,
-			Secure:   h.useSecureCookies,
-			SameSite: http.SameSiteNoneMode,
-			Expires:  expiryTime,
-		}
-
+		cookie := h.createRefreshTokenCookie(tokenUser)
 		http.SetCookie(res, cookie)
 
 		responseData := make(map[string]interface{})
@@ -562,4 +534,37 @@ func (h *UserHandler) ValidateSignupConfirmationKey(res http.ResponseWriter, req
 		return http.StatusOK, responseData, "Login successful"
 
 	})
+}
+
+func (h *UserHandler) createRefreshTokenCookie(user *model.User) *http.Cookie {
+
+	expiryTime := time.Now().Add(time.Hour * 720)
+	refreshToken := h.userCache.RotateRefreshToken(user)
+
+	return &http.Cookie{
+		Name:     "refresh-token",
+		Path:     "/",
+		Domain:   "justthetalk.com",
+		Value:    refreshToken,
+		HttpOnly: true,
+		Secure:   h.useSecureCookies,
+		SameSite: http.SameSiteNoneMode,
+		Expires:  expiryTime,
+	}
+
+}
+
+func (h *UserHandler) expiredRefreshTokenCookie() *http.Cookie {
+
+	return &http.Cookie{
+		Name:     "refresh-token",
+		Path:     "/",
+		Domain:   "justthetalk.com",
+		Value:    "",
+		HttpOnly: true,
+		Secure:   h.useSecureCookies,
+		SameSite: http.SameSiteNoneMode,
+		MaxAge:   0,
+	}
+
 }
