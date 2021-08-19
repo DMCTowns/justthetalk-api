@@ -595,7 +595,7 @@ func (h *UserHandler) createRefreshTokenCookie(user *model.User) *http.Cookie {
 		Value:    utils.CreateJWT(user, time.Now().Add(time.Hour*720), model.UserClaimPurposeRefreshToken),
 		HttpOnly: true,
 		Secure:   h.useSecureCookies,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteNoneMode,
 		Expires:  expiryTime,
 	}
 
@@ -610,7 +610,7 @@ func (h *UserHandler) expiredRefreshTokenCookie() *http.Cookie {
 		Value:    "",
 		HttpOnly: true,
 		Secure:   h.useSecureCookies,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   0,
 	}
 
