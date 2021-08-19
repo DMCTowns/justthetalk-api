@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 
 	"justthetalk/businesslogic"
@@ -136,16 +137,17 @@ func extractCookieHack(cookieHeader string) string {
 func (h *UserHandler) RefreshToken(res http.ResponseWriter, req *http.Request) {
 	utils.AnonymousHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, db *gorm.DB) (int, interface{}, string) {
 
-		// var refreshToken string
-		// if refreshTokenCookie, err := req.Cookie("refresh-token"); err != nil {
-		// 	log.Errorf("fetching refresh token cookie: %v", err)
-		// 	if data, err := json.Marshal(req.Header); err == nil {
-		// 		log.Info(string(data))
-		// 	}
-		// 	panic(utils.ErrBadRequest)
-		// } else {
-		// 	refreshToken = refreshTokenCookie.Value
-		// }
+		defer func() {
+			if r := recover(); r != nil {
+				err := r.(error)
+				log.Error(err)
+				if data, err := json.Marshal(req.Header); err == nil {
+					log.Info(string(data))
+				}
+				panic(err)
+			}
+		}()
+
 		cookieHeader := req.Header.Get("Cookie")
 		if len(cookieHeader) == 0 {
 			panic(utils.ErrBadRequest)
