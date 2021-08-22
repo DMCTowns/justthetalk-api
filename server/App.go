@@ -141,6 +141,7 @@ func (a *App) configureFolderRouter(router *mux.Router) {
 	folderRouter.HandleFunc("/{folderId:[0-9]+}", folderHandler.GetFolder).Methods(http.MethodGet, http.MethodOptions)
 
 	folderRouter.HandleFunc("/{folderId:[0-9]+}/discussion", folderHandler.GetDiscussions).Methods(http.MethodGet, http.MethodOptions)
+	folderRouter.HandleFunc("/{folderId:[0-9]+}/discussion/before", folderHandler.GetDiscussionsBefore).Methods(http.MethodGet, http.MethodOptions)
 	folderRouter.HandleFunc("/{folderId:[0-9]+}/discussion", folderHandler.CreateDiscussion).Methods(http.MethodPost, http.MethodOptions)
 	folderRouter.HandleFunc("/{folderId:[0-9]+}/discussion/{discussionId:[0-9]+}", folderHandler.GetDiscussion).Methods(http.MethodGet, http.MethodOptions)
 	folderRouter.HandleFunc("/{folderId:[0-9]+}/discussion/{discussionId:[0-9]+}", folderHandler.EditDiscussion).Methods(http.MethodPut, http.MethodOptions)
@@ -162,6 +163,8 @@ func (a *App) configureFrontPageRouter(router *mux.Router) {
 
 	frontPageRouter := router.PathPrefix("/frontpage/{viewType}").Subrouter().StrictSlash(false)
 	frontPageRouter.HandleFunc("", frontPageHandler.GetFrontPage).Methods(http.MethodGet, http.MethodOptions)
+	frontPageRouter.HandleFunc("/since", frontPageHandler.GetFrontPageSince).Methods(http.MethodGet, http.MethodOptions)
+	frontPageRouter.HandleFunc("/before", frontPageHandler.GetFrontPageBefore).Methods(http.MethodGet, http.MethodOptions)
 
 }
 

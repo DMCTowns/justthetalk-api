@@ -18,6 +18,7 @@ package businesslogic
 import (
 	"justthetalk/model"
 	"justthetalk/utils"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -38,7 +39,7 @@ func GetFrontPage(user *model.User, viewType string, pageSize int, pageStart int
 		panic(utils.ErrForbidden)
 	}
 
-	var discussions []*model.FrontPageEntry
+	discussions := []*model.FrontPageEntry{}
 	var result *gorm.DB
 	switch viewType {
 	case "latest":
@@ -49,6 +50,88 @@ func GetFrontPage(user *model.User, viewType string, pageSize int, pageStart int
 		result = db.Raw("call get_frontpage_subscriptions(?, ?, ?, ?)", userId, isAdmin, pageStart, pageSize).Scan(&discussions)
 	case "startedbyme":
 		result = db.Raw("call get_frontpage_startedbyme(?, ?, ?, ?)", userId, isAdmin, pageStart, pageSize).Scan(&discussions)
+	default:
+		panic(utils.ErrBadRequest)
+	}
+
+	if result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	utils.FormatFrontPageEntries(discussions)
+
+	return discussions
+
+}
+
+func GetFrontPageSince(user *model.User, viewType string, pageSize int, sinceDate time.Time, userCache *UserCache, discussionCache *DiscussionCache, db *gorm.DB) []*model.FrontPageEntry {
+
+	userId := 0
+	isAdmin := 0
+
+	if user != nil {
+		userId = int(user.Id)
+		if user.IsAdmin {
+			isAdmin = 1
+		}
+	}
+
+	if userId == 0 && (viewType == "subs" || viewType == "startedbyme") {
+		panic(utils.ErrForbidden)
+	}
+
+	discussions := []*model.FrontPageEntry{}
+	var result *gorm.DB
+	switch viewType {
+	case "latest":
+		result = db.Raw("call get_frontpage_latest_since(?, ?, ?, ?)", userId, isAdmin, sinceDate, pageSize).Scan(&discussions)
+	case "mostactive":
+		result = db.Raw("call get_frontpage_mostactive_since(?, ?, ?, ?)", userId, isAdmin, sinceDate, pageSize).Scan(&discussions)
+	case "subs":
+		result = db.Raw("call get_frontpage_subscriptions_since(?, ?, ?, ?)", userId, isAdmin, sinceDate, pageSize).Scan(&discussions)
+	case "startedbyme":
+		result = db.Raw("call get_frontpage_startedbyme_since(?, ?, ?, ?)", userId, isAdmin, sinceDate, pageSize).Scan(&discussions)
+	default:
+		panic(utils.ErrBadRequest)
+	}
+
+	if result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	utils.FormatFrontPageEntries(discussions)
+
+	return discussions
+
+}
+
+func GetFrontPageBefore(user *model.User, viewType string, pageSize int, beforeDate time.Time, userCache *UserCache, discussionCache *DiscussionCache, db *gorm.DB) []*model.FrontPageEntry {
+
+	userId := 0
+	isAdmin := 0
+
+	if user != nil {
+		userId = int(user.Id)
+		if user.IsAdmin {
+			isAdmin = 1
+		}
+	}
+
+	if userId == 0 && (viewType == "subs" || viewType == "startedbyme") {
+		panic(utils.ErrForbidden)
+	}
+
+	discussions := []*model.FrontPageEntry{}
+	var result *gorm.DB
+	switch viewType {
+	case "latest":
+		result = db.Raw("call get_frontpage_latest_before(?, ?, ?, ?)", userId, isAdmin, beforeDate, pageSize).Scan(&discussions)
+	case "mostactive":
+		result = db.Raw("call get_frontpage_mostactive_before(?, ?, ?, ?)", userId, isAdmin, beforeDate, pageSize).Scan(&discussions)
+	case "subs":
+		result = db.Raw("call get_frontpage_subscriptions_before(?, ?, ?, ?)", userId, isAdmin, beforeDate, pageSize).Scan(&discussions)
+	case "startedbyme":
+		result = db.Raw("call get_frontpage_startedbyme_before(?, ?, ?, ?)", userId, isAdmin, beforeDate, pageSize).Scan(&discussions)
 	default:
 		panic(utils.ErrBadRequest)
 	}

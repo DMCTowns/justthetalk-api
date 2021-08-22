@@ -60,6 +60,11 @@ alter table password_reset add column ip_address varchar(15);
 create unique index idx_password_reset_reset_key on password_reset(reset_key);
 
 alter table user_discussion add column created_date datetime not null default UTC_TIMESTAMP();
+
+alter table front_page_entry  modify last_post datetime(6) null;
+drop index idx_front_page_entry_last_post on front_page_entry;
+create index idx_front_page_entry_last_post on front_page_entry(last_post);
+
 ---------------------------------------------
 
 DROP PROCEDURE IF EXISTS get_folders;
@@ -157,6 +162,33 @@ BEGIN
     where fp.folder_id = $folder_id
     order by fp.zorder desc, fp.last_post desc
     limit $page_start, $page_size;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_folder_discussions_before;
+DELIMITER //
+CREATE PROCEDURE get_folder_discussions_before(IN $folder_id bigint, IN $user_id bigint, IN $date_before datetime, IN $page_size int)
+BEGIN
+
+    select fp.discussion_id,
+    fp.discussion_name,
+    fp.folder_id,
+    fp.folder_key,
+    fp.folder_name,
+    fp.last_post,
+    fp.post_count,
+    fp.last_post_id,
+    coalesce(ud.last_post_count, 0) last_post_read_count,
+    ud.last_post last_post_read_date,
+    ud.last_post_id last_post_read_id
+    from front_page_entry fp
+    left join (select * from user_discussion where user_id = $user_id) ud
+    on fp.discussion_id = ud.discussion_id
+    where fp.folder_id = $folder_id
+    and fp.last_post < $date_before
+    order by fp.zorder desc, fp.last_post desc
+    limit $page_size;
 
 END //
 DELIMITER ;
@@ -1263,6 +1295,193 @@ BEGIN
 END //
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS get_frontpage_latest_since;
+DELIMITER //
+CREATE PROCEDURE get_frontpage_latest_since(IN $user_id int, IN $is_admin int, IN $date_since datetime, IN $page_size int)
+BEGIN
+
+    select fp.discussion_id,
+    fp.discussion_name,
+    fp.folder_id,
+    fp.folder_key,
+    fp.folder_name,
+    fp.last_post,
+    fp.post_count,
+    fp.last_post_id,
+    coalesce(ud.last_post_count, 0) last_post_read_count,
+    ud.last_post last_post_read_date,
+    ud.last_post_id last_post_read_id
+    from front_page_entry fp
+    left join (select * from user_discussion where user_id = $user_id) ud
+    on fp.discussion_id = ud.discussion_id
+    where ((fp.admin_only = 0) or (fp.admin_only and $is_admin > 0))
+    and fp.last_post > $date_since
+    order by fp.zorder desc, fp.last_post desc
+    limit $page_size;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_frontpage_mostactive_since;
+DELIMITER //
+CREATE PROCEDURE get_frontpage_mostactive_since(IN $user_id int, IN $is_admin int, IN $date_since datetime, IN $page_size int)
+BEGIN
+
+    select fp.discussion_id,
+    fp.discussion_name,
+    fp.folder_id,
+    fp.folder_key,
+    fp.folder_name,
+    fp.last_post,
+    fp.post_count,
+    fp.last_post_id,
+    coalesce(ud.last_post_count, 0) last_post_read_count,
+    ud.last_post last_post_read_date,
+    ud.last_post_id last_post_read_id,
+    case when (fp.post_count - coalesce(ud.last_post_count, 0)) > 0 then 1 else 0 end has_unread,
+    (fp.post_count - coalesce(ud.last_post_count, 0)) unread_count
+    from front_page_entry fp
+    left join (select * from user_discussion where user_id = $user_id) ud
+    on fp.discussion_id = ud.discussion_id
+    inner join discussion_activity da
+    on fp.discussion_id = da.discussion_id
+    where ((fp.admin_only = 0) or (fp.admin_only and $is_admin > 0))
+    and fp.last_post > $date_since
+    order by fp.zorder desc,
+    da.post_count desc
+    limit $page_size;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_frontpage_startedbyme_since;
+DELIMITER //
+CREATE PROCEDURE get_frontpage_startedbyme_since(IN $user_id int, IN $is_admin int, IN $date_since datetime, IN $page_size int)
+BEGIN
+
+    select fp.discussion_id,
+    fp.discussion_name,
+    fp.folder_id,
+    fp.folder_key,
+    fp.folder_name,
+    fp.last_post,
+    fp.post_count,
+    fp.last_post_id,
+    coalesce(ud.last_post_count, 0) last_post_read_count,
+    ud.last_post last_post_read_date,
+    ud.last_post_id last_post_read_id,
+    case when (fp.post_count - coalesce(ud.last_post_count, 0)) > 0 then 1 else 0 end has_unread,
+    (fp.post_count - coalesce(ud.last_post_count, 0)) unread_count
+    from front_page_entry fp
+    left join (select * from user_discussion where user_id = $user_id) ud
+    on fp.discussion_id = ud.discussion_id
+    inner join discussion d
+    on fp.discussion_id = d.id
+    where ((fp.admin_only = 0) or (fp.admin_only and $is_admin > 0))
+    and d.user_id = $user_id
+    and fp.last_post > $date_since
+    order by fp.zorder desc,
+    fp.last_post desc
+    limit $page_size;
+
+END //
+DELIMITER ;
+
+--
+
+DROP PROCEDURE IF EXISTS get_frontpage_latest_before;
+DELIMITER //
+CREATE PROCEDURE get_frontpage_latest_before(IN $user_id int, IN $is_admin int, IN $date_before datetime, IN $page_size int)
+BEGIN
+
+    select fp.discussion_id,
+    fp.discussion_name,
+    fp.folder_id,
+    fp.folder_key,
+    fp.folder_name,
+    fp.last_post,
+    fp.post_count,
+    fp.last_post_id,
+    coalesce(ud.last_post_count, 0) last_post_read_count,
+    ud.last_post last_post_read_date,
+    ud.last_post_id last_post_read_id
+    from front_page_entry fp
+    left join (select * from user_discussion where user_id = $user_id) ud
+    on fp.discussion_id = ud.discussion_id
+    where ((fp.admin_only = 0) or (fp.admin_only and $is_admin > 0))
+    and fp.last_post < $date_before
+    order by fp.zorder desc, fp.last_post desc
+    limit $page_size;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_frontpage_mostactive_before;
+DELIMITER //
+CREATE PROCEDURE get_frontpage_mostactive_before(IN $user_id int, IN $is_admin int, IN $date_before datetime, IN $page_size int)
+BEGIN
+
+    select fp.discussion_id,
+    fp.discussion_name,
+    fp.folder_id,
+    fp.folder_key,
+    fp.folder_name,
+    fp.last_post,
+    fp.post_count,
+    fp.last_post_id,
+    coalesce(ud.last_post_count, 0) last_post_read_count,
+    ud.last_post last_post_read_date,
+    ud.last_post_id last_post_read_id,
+    case when (fp.post_count - coalesce(ud.last_post_count, 0)) > 0 then 1 else 0 end has_unread,
+    (fp.post_count - coalesce(ud.last_post_count, 0)) unread_count
+    from front_page_entry fp
+    left join (select * from user_discussion where user_id = $user_id) ud
+    on fp.discussion_id = ud.discussion_id
+    inner join discussion_activity da
+    on fp.discussion_id = da.discussion_id
+    where ((fp.admin_only = 0) or (fp.admin_only and $is_admin > 0))
+    and fp.last_post < $date_before
+    order by fp.zorder desc,
+    da.post_count desc
+    limit $page_size;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_frontpage_startedbyme_before;
+DELIMITER //
+CREATE PROCEDURE get_frontpage_startedbyme_before(IN $user_id int, IN $is_admin int, IN $date_before datetime, IN $page_size int)
+BEGIN
+
+    select fp.discussion_id,
+    fp.discussion_name,
+    fp.folder_id,
+    fp.folder_key,
+    fp.folder_name,
+    fp.last_post,
+    fp.post_count,
+    fp.last_post_id,
+    coalesce(ud.last_post_count, 0) last_post_read_count,
+    ud.last_post last_post_read_date,
+    ud.last_post_id last_post_read_id,
+    case when (fp.post_count - coalesce(ud.last_post_count, 0)) > 0 then 1 else 0 end has_unread,
+    (fp.post_count - coalesce(ud.last_post_count, 0)) unread_count
+    from front_page_entry fp
+    left join (select * from user_discussion where user_id = $user_id) ud
+    on fp.discussion_id = ud.discussion_id
+    inner join discussion d
+    on fp.discussion_id = d.id
+    where ((fp.admin_only = 0) or (fp.admin_only and $is_admin > 0))
+    and d.user_id = $user_id
+    and fp.last_post < $date_before
+    order by fp.zorder desc,
+    fp.last_post desc
+    limit $page_size;
+
+END //
+DELIMITER ;
+
+
 DROP PROCEDURE IF EXISTS calculate_frontpage_mostactive;
 DELIMITER //
 CREATE PROCEDURE calculate_frontpage_mostactive()
@@ -1386,7 +1605,7 @@ BEGIN
 
     declare $post_num int;
     declare $last_post_id int;
-    declare $current_timestamp datetime;
+    declare $current_timestamp datetime(6);
 
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -1394,7 +1613,7 @@ BEGIN
         RESIGNAL;
     END;
 
-    select UTC_TIMESTAMP() into $current_timestamp;
+    select UTC_TIMESTAMP(6) into $current_timestamp;
 
     start transaction;
 

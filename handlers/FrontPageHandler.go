@@ -20,6 +20,7 @@ import (
 	"justthetalk/model"
 	"justthetalk/utils"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -60,6 +61,68 @@ func (h *FrontPageHandler) GetFrontPage(res http.ResponseWriter, req *http.Reque
 		viewType := utils.ExtractVarString("viewType", req)
 
 		discussions := businesslogic.GetFrontPage(user, viewType, pageSize, pageStart, h.userCache, h.discussionCache, db)
+
+		if user == nil {
+			frontPageCount.WithLabelValues("anon").Inc()
+		} else {
+			frontPageCount.WithLabelValues("auth").Inc()
+		}
+
+		return http.StatusOK, discussions, ""
+
+	})
+}
+
+func (h *FrontPageHandler) GetFrontPageSince(res http.ResponseWriter, req *http.Request) {
+	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		var err error
+		dateSince := time.Now()
+		pageSize := 0
+
+		dateParam := req.URL.Query().Get("dt")
+		if len(dateParam) > 0 {
+			dateSince, err = time.Parse(time.RFC3339, dateParam)
+			if err != nil {
+				panic(utils.ErrBadRequest)
+			}
+		}
+
+		pageSize = utils.ExtractQueryInt("size", req)
+		viewType := utils.ExtractVarString("viewType", req)
+
+		discussions := businesslogic.GetFrontPageSince(user, viewType, pageSize, dateSince, h.userCache, h.discussionCache, db)
+
+		if user == nil {
+			frontPageCount.WithLabelValues("anon").Inc()
+		} else {
+			frontPageCount.WithLabelValues("auth").Inc()
+		}
+
+		return http.StatusOK, discussions, ""
+
+	})
+}
+
+func (h *FrontPageHandler) GetFrontPageBefore(res http.ResponseWriter, req *http.Request) {
+	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		var err error
+		dateSince := time.Now()
+		pageSize := 0
+
+		dateParam := req.URL.Query().Get("dt")
+		if len(dateParam) > 0 {
+			dateSince, err = time.Parse(time.RFC3339, dateParam)
+			if err != nil {
+				panic(utils.ErrBadRequest)
+			}
+		}
+
+		pageSize = utils.ExtractQueryInt("size", req)
+		viewType := utils.ExtractVarString("viewType", req)
+
+		discussions := businesslogic.GetFrontPageBefore(user, viewType, pageSize, dateSince, h.userCache, h.discussionCache, db)
 
 		if user == nil {
 			frontPageCount.WithLabelValues("anon").Inc()

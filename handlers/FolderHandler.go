@@ -21,6 +21,7 @@ import (
 	"justthetalk/model"
 	"justthetalk/utils"
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/copier"
 	"github.com/prometheus/client_golang/prometheus"
@@ -126,6 +127,33 @@ func (h *FolderHandler) GetDiscussions(res http.ResponseWriter, req *http.Reques
 		folder := h.folderCache.Get(folderId, user)
 
 		discussions := businesslogic.GetDiscussions(folder, pageStart, pageSize, user, db)
+
+		return http.StatusOK, discussions, ""
+
+	})
+}
+
+func (h *FolderHandler) GetDiscussionsBefore(res http.ResponseWriter, req *http.Request) {
+	utils.HandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, user *model.User, db *gorm.DB) (int, interface{}, string) {
+
+		var err error
+		dateBefore := time.Now()
+		pageSize := 0
+
+		dateParam := req.URL.Query().Get("dt")
+		if len(dateParam) > 0 {
+			dateBefore, err = time.Parse(time.RFC3339, dateParam)
+			if err != nil {
+				panic(utils.ErrBadRequest)
+			}
+		}
+
+		pageSize = utils.ExtractQueryInt("size", req)
+		folderId := utils.ExtractVarInt("folderId", req)
+
+		folder := h.folderCache.Get(folderId, user)
+
+		discussions := businesslogic.GetDiscussionsBefore(folder, dateBefore, pageSize, user, db)
 
 		return http.StatusOK, discussions, ""
 

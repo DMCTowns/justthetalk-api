@@ -588,6 +588,11 @@ func (h *UserHandler) createRefreshTokenCookie(user *model.User) *http.Cookie {
 
 	expiryTime := time.Now().Add(time.Hour * 720)
 
+	sameSiteMode := http.SameSiteNoneMode
+	if !h.useSecureCookies {
+		sameSiteMode = http.SameSiteLaxMode
+	}
+
 	return &http.Cookie{
 		Name:     "refresh-token",
 		Domain:   "justthetalk.com",
@@ -595,13 +600,18 @@ func (h *UserHandler) createRefreshTokenCookie(user *model.User) *http.Cookie {
 		Value:    utils.CreateJWT(user, time.Now().Add(time.Hour*720), model.UserClaimPurposeRefreshToken),
 		HttpOnly: true,
 		Secure:   h.useSecureCookies,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: sameSiteMode,
 		Expires:  expiryTime,
 	}
 
 }
 
 func (h *UserHandler) expiredRefreshTokenCookie() *http.Cookie {
+
+	sameSiteMode := http.SameSiteNoneMode
+	if !h.useSecureCookies {
+		sameSiteMode = http.SameSiteLaxMode
+	}
 
 	return &http.Cookie{
 		Name:     "refresh-token",
@@ -610,7 +620,7 @@ func (h *UserHandler) expiredRefreshTokenCookie() *http.Cookie {
 		Value:    "",
 		HttpOnly: true,
 		Secure:   h.useSecureCookies,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: sameSiteMode,
 		MaxAge:   0,
 	}
 

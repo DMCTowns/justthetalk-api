@@ -48,7 +48,7 @@ func OpenConnections(dbHost string, dbPort string, redisHost string, redisPort s
 			log.New(), // io writer
 			logger.Config{
 				SlowThreshold: time.Second, // Slow SQL threshold
-				LogLevel:      logger.Warn, // Log level
+				LogLevel:      logger.Info, // Log level
 				Colorful:      true,        // Disable color
 			},
 		)

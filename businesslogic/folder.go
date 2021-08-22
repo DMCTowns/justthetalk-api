@@ -19,6 +19,7 @@ import (
 	"html"
 	"justthetalk/model"
 	"justthetalk/utils"
+	"time"
 
 	"errors"
 
@@ -56,6 +57,24 @@ func GetDiscussions(folder *model.Folder, pageStart int, pageSize int, user *mod
 
 	discussions := make([]*model.FrontPageEntry, 0)
 	if result := db.Raw("call get_folder_discussions(?, ?, ?, ?)", folder.Id, userId, pageStart, pageSize).Scan(&discussions); result.Error != nil {
+		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+	}
+
+	utils.FormatFrontPageEntries(discussions)
+
+	return discussions
+
+}
+
+func GetDiscussionsBefore(folder *model.Folder, beforeDate time.Time, pageSize int, user *model.User, db *gorm.DB) []*model.FrontPageEntry {
+
+	userId := 0
+	if user != nil {
+		userId = int(user.Id)
+	}
+
+	discussions := make([]*model.FrontPageEntry, 0)
+	if result := db.Raw("call get_folder_discussions_before(?, ?, ?, ?)", folder.Id, userId, beforeDate, pageSize).Scan(&discussions); result.Error != nil {
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
