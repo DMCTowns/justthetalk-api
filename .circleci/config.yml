@@ -6,7 +6,9 @@ jobs:
       - checkout
       - run: mkdir -p /tmp/workspace/build
       - run: echo `date +"%Y%m%d-%H%M"` > /tmp/workspace/build/version.txt
-      - run: export JUSTTHETALK_BUILD_NUM=`cat /tmp/workspace/build/version.txt`
+      - run: echo 'export JUSTTHETALK_BUILD_NUM=`cat /tmp/workspace/build/version.txt`' >> $BASH_ENV
+      - run: source $BASH_ENV
+      - run: echo $JUSTTHETALK_BUILD_NUM
       - run: echo "$DOCKER_HUB_SECRET" | docker login --username $DOCKER_HUB_LOGIN --password-stdin
       - run: docker build -t jdudmesh/justthetalk-api:$JUSTTHETALK_BUILD_NUM .
       - run: docker push jdudmesh/justthetalk-api:$JUSTTHETALK_BUILD_NUM
@@ -24,7 +26,9 @@ jobs:
             - "a3:4c:48:b4:c3:6e:9a:12:4c:27:f8:11:be:fd:d0:72"
       - attach_workspace:
           at: /tmp/workspace
-      - run: export JUSTTHETALK_BUILD_NUM=`cat /tmp/workspace/build/version.txt`
+      - run: echo 'export JUSTTHETALK_BUILD_NUM=`cat /tmp/workspace/build/version.txt`' >> $BASH_ENV
+      - run: source $BASH_ENV
+      - run: echo $JUSTTHETALK_BUILD_NUM
       - run: echo 'justthetalk.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBDjO6cmYwqSA0JRMPXC7I3ufaltngzy5QUcgoQABzyJvj44gbZFCDjTCa/+m8J3dO/U8JAfX+XOTlwTW5R2/WVw=' >> ~/.ssh/known_hosts
       - run: ssh circleci@justthetalk.com /home/circleci/deploy.sh $JUSTTHETALK_BUILD_NUM
 
