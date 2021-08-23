@@ -1,12 +1,29 @@
 version: 2
 jobs:
- build:
-   machine: true
-   steps:
-     - checkout
-     - run: |
-         echo "$DOCKER_HUB_SECRET" | docker login --username $DOCKER_HUB_LOGIN --password-stdin
+  Build:
+    machine: true
+    steps:
+      - checkout
+      - run: |
+        echo "$DOCKER_HUB_SECRET" | docker login --username $DOCKER_HUB_LOGIN --password-stdin
 
-     - run: docker build -t jdudmesh/justthetalk-api:$CIRCLE_BRANCH .
+      - run: docker build -t jdudmesh/justthetalk-api:$CIRCLE_BUILD_NUM .
+      - run: docker push jdudmesh/justthetalk-api:$CIRCLE_BUILD_NUM
 
-     - run: docker push jdudmesh/justthetalk-api:$CIRCLE_BRANCH
+  Deploy:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "a3:4c:48:b4:c3:6e:9a:12:4c:27:f8:11:be:fd:d0:72"
+      - run: ssh circleci@justthetalk.com /home/circleci/deploy.sh $CIRCLE_BUILD_NUM
+
+workflows:
+  version: 2
+  build-workflow:
+    jobs:
+      - Build
+      - Deploy:
+          requires:
+            - Build
