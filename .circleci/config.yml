@@ -1,0 +1,12 @@
+version: 2
+jobs:
+ build:
+   machine: true
+   steps:
+     - checkout
+     - run: |
+         echo "$DOCKER_HUB_SECRET" | docker login --username $DOCKER_HUB_LOGIN --password-stdin
+
+     - run: docker build -t jdudmesh/justthetalk-api:$CIRCLE_BRANCH .
+
+     - run: docker push jdudmesh/justthetalk-api:$CIRCLE_BRANCH
