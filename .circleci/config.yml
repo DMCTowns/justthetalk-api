@@ -5,7 +5,7 @@ jobs:
     steps:
       - checkout
       - run: |
-        echo "$DOCKER_HUB_SECRET" | docker login --username $DOCKER_HUB_LOGIN --password-stdin
+          echo "$DOCKER_HUB_SECRET" | docker login --username $DOCKER_HUB_LOGIN --password-stdin
 
       - run: docker build -t jdudmesh/justthetalk-api:$CIRCLE_BUILD_NUM .
       - run: docker push jdudmesh/justthetalk-api:$CIRCLE_BUILD_NUM
