@@ -7,14 +7,13 @@ jobs:
       - run: mkdir -p /tmp/workspace/build
       - run: echo `date +"%Y%m%d-%H%M"` > /tmp/workspace/build/version.txt
       - run: JUSTTHETALK_BUILD_NUM=`cat /tmp/workspace/build/version.txt`
-      - run: |
-          echo "$DOCKER_HUB_SECRET" | docker login --username $DOCKER_HUB_LOGIN --password-stdin
+      - run: echo "$DOCKER_HUB_SECRET" | docker login --username $DOCKER_HUB_LOGIN --password-stdin
       - run: docker build -t jdudmesh/justthetalk-api:$JUSTTHETALK_BUILD_NUM .
       - run: docker push jdudmesh/justthetalk-api:$JUSTTHETALK_BUILD_NUM
       - persist_to_workspace:
-        root: /tmp/workspace
-        paths:
-          - build/version.txt
+          root: /tmp/workspace
+          paths:
+            - build/version.txt
 
   Deploy:
     docker:
