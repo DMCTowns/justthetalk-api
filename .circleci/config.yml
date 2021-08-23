@@ -18,9 +18,9 @@ jobs:
           fingerprints:
             - "a3:4c:48:b4:c3:6e:9a:12:4c:27:f8:11:be:fd:d0:72"
       - run: |
-        echo 'justthetalk.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBDjO6cmYwqSA0JRMPXC7I3ufaltngzy5QUcgoQABzyJvj44gbZFCDjTCa/+m8J3dO/U8JAfX+XOTlwTW5R2/WVw=' >> ~/.ssh/known_hosts
+          echo 'justthetalk.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBDjO6cmYwqSA0JRMPXC7I3ufaltngzy5QUcgoQABzyJvj44gbZFCDjTCa/+m8J3dO/U8JAfX+XOTlwTW5R2/WVw=' >> ~/.ssh/known_hosts
       - run: |
-        ssh circleci@justthetalk.com /home/circleci/deploy.sh $CIRCLE_BUILD_NUM
+          ssh circleci@justthetalk.com /home/circleci/deploy.sh $CIRCLE_BUILD_NUM
 
 workflows:
   version: 2
