@@ -12,6 +12,8 @@ jobs:
       - run: echo "$DOCKER_HUB_SECRET" | docker login --username $DOCKER_HUB_LOGIN --password-stdin
       - run: docker build -t jdudmesh/justthetalk-api:$JUSTTHETALK_BUILD_NUM .
       - run: docker push jdudmesh/justthetalk-api:$JUSTTHETALK_BUILD_NUM
+      - run: docker tag jdudmesh/justthetalk-api:$JUSTTHETALK_BUILD_NUM jdudmesh/justthetalk-api:latest
+      - run: docker push jdudmesh/justthetalk-api:latest
       - persist_to_workspace:
           root: /tmp/workspace
           paths:
