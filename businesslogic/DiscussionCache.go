@@ -113,7 +113,7 @@ func (cache *DiscussionCache) Put(discussion *model.Discussion) {
 
 	status := connections.RedisConnection().Set(context.Background(), key, data, time.Hour*1)
 	if status.Err() != nil {
-		panic(status.Err().Error())
+		panic(status.Err())
 	}
 
 }
@@ -124,7 +124,7 @@ func (cache *DiscussionCache) Flush(discussionId uint) {
 
 	status := connections.RedisConnection().Del(context.Background(), "D"+discussionIdStr, "B"+discussionIdStr)
 	if status.Err() != nil {
-		panic(status.Err().Error())
+		panic(status.Err())
 	}
 
 }

@@ -299,6 +299,8 @@ func (h *FolderHandler) CreatePost(res http.ResponseWriter, req *http.Request) {
 
 		posts := businesslogic.GetPosts(folder, discussion, user, returnPostsFromPostNum, 20, db)
 
+		businesslogic.UpdateDiscussionBookmark(user, discussion, created, db)
+
 		postCount.WithLabelValues(folder.Key).Inc()
 
 		return http.StatusOK, posts, ""
