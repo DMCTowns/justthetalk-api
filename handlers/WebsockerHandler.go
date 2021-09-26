@@ -282,6 +282,14 @@ func (client *websocketClient) sendPong() {
 
 func (client *websocketClient) send(message string) error {
 
+	defer func() {
+		if r := recover(); r != nil {
+			err := r.(error)
+			log.Errorf("Sending to websocket: %v", err)
+			debug.PrintStack()
+		}
+	}()
+
 	log.Debug("Sending: " + message)
 
 	err := client.connection.SetWriteDeadline(time.Now().Add(writeWait))
