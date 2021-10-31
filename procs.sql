@@ -1950,8 +1950,11 @@ CREATE PROCEDURE create_discussion(IN $folder_id bigint, IN $discussion_title va
 BEGIN
 
     declare $current_timestamp datetime;
+    declare $discussion_id bigint;
 
     select UTC_TIMESTAMP() into $current_timestamp;
+
+    start transaction;
 
     INSERT INTO discussion (
     version,
@@ -1984,7 +1987,19 @@ BEGIN
     $current_timestamp,
     $current_timestamp);
 
-    call get_discussion(LAST_INSERT_ID());
+    select LAST_INSERT_ID() into $discussion_id;
+
+    insert into front_page_entry (version, discussion_id, discussion_name, folder_id, folder_key, folder_name, last_post, last_post_id, post_count, admin_only)
+    select 0, d.id, d.title, d.folder_id, f.folder_key, f.description, d.last_post, d.last_post_id , d.post_count, case when f.type  = 3 then 1 else 0 end
+    from discussion  d
+    inner join folder f
+    on d.folder_id = f.id
+    where d.id = $discussion_id
+    and f.type  in (0, 3);
+
+    commit work;
+
+    call get_discussion($discussion_id);
 
 END //
 DELIMITER ;
@@ -1998,6 +2013,8 @@ BEGIN
 
     select UTC_TIMESTAMP() into $current_timestamp;
 
+    start transaction;
+
     update discussion set
     version = version + 1,
     last_updated = $current_timestamp,
@@ -2006,6 +2023,10 @@ BEGIN
     status = $locked
     where id = $discussion_id
     and folder_id = $folder_id;
+
+    update front_page_entry set discussion_name = $discussion_title where discussion_id = $discussion_id;
+
+    commit work;
 
     call get_discussion($discussion_id);
 
@@ -2319,7 +2340,12 @@ DELIMITER //
 CREATE PROCEDURE delete_discussion(IN $discussion_id bigint, IN $status int)
 BEGIN
 
+    start transaction;
+    
     update discussion set status = $status, deleted = case $status when 0 then 0 else 1 end where id = $discussion_id;
+    delete from front_page_entry where discussion_id = $discussion_id;
+
+    commit work;
 
     call get_discussion($discussion_id);
 
