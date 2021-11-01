@@ -1990,7 +1990,7 @@ BEGIN
     select LAST_INSERT_ID() into $discussion_id;
 
     insert into front_page_entry (version, discussion_id, discussion_name, folder_id, folder_key, folder_name, last_post, last_post_id, post_count, admin_only)
-    select 0, d.id, d.title, d.folder_id, f.folder_key, f.description, d.last_post, d.last_post_id , d.post_count, case when f.type  = 3 then 1 else 0 end
+    select 0, d.id, d.title, d.folder_id, f.folder_key, f.description, d.created_date, null, d.post_count, case when f.type  = 3 then 1 else 0 end
     from discussion  d
     inner join folder f
     on d.folder_id = f.id
@@ -2341,7 +2341,7 @@ CREATE PROCEDURE delete_discussion(IN $discussion_id bigint, IN $status int)
 BEGIN
 
     start transaction;
-    
+
     update discussion set status = $status, deleted = case $status when 0 then 0 else 1 end where id = $discussion_id;
     delete from front_page_entry where discussion_id = $discussion_id;
 
@@ -3005,7 +3005,7 @@ BEGIN
     delete from front_page_entry;
 
     insert into front_page_entry (version, discussion_id, discussion_name, folder_id, folder_key, folder_name, last_post, last_post_id, post_count, admin_only)
-    select 0, d.id, d.title, d.folder_id, f.folder_key, f.description, d.last_post, d.last_post_id , d.post_count, case when f.type  = 3 then 1 else 0 end
+    select 0, d.id, d.title, d.folder_id, f.folder_key, f.description, coalesce(d.last_post, d.created_date), d.last_post_id , d.post_count, case when f.type  = 3 then 1 else 0 end
     from discussion  d
     inner join folder f
     on d.folder_id = f.id
