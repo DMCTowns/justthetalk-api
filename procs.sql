@@ -1617,7 +1617,7 @@ BEGIN
 
     start transaction;
 
-    select (post_count + 1) into $post_num from discussion d where d.id = $discussion_id;
+    select count(*) + 1 into $post_num from post where $discussion_id;
 
     INSERT INTO post (
         version,
@@ -3012,6 +3012,55 @@ BEGIN
     where f.type  in (0, 3)
     and d.status = 0
     order by last_post;
+
+    commit work;
+
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS fix_discussion_post_numbering;
+DELIMITER //
+CREATE PROCEDURE fix_discussion_post_numbering(IN $discussion_id bigint)
+BEGIN
+
+    declare quit int default 0;
+    declare $post_num bigint default 0;
+    declare $post_id bigint;
+
+    declare curs
+        cursor for
+            select p.id
+            from post p
+            where discussion_id = $discussion_id
+            order by p.id;
+
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+	declare continue handler for not found set quit = 1;
+
+    open curs;
+
+    start transaction;
+
+    curs_loop: loop
+
+        fetch curs into $post_id;
+        if quit > 0 then
+            leave curs_loop;
+        end if;
+
+		set $post_num = $post_num + 1;
+        update post set post_num = $post_num where id = $post_id;
+
+
+    end loop curs_loop;
+
+	update discussion set post_count = $post_num where id = $discussion_id;
 
     commit work;
 
