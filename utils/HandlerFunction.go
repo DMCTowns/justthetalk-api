@@ -95,6 +95,8 @@ func HandlerFunction(res http.ResponseWriter, req *http.Request, targetFunc Hand
 			case errors.Is(err, ErrForbidden):
 				statusCode = http.StatusForbidden
 			case errors.Is(err, ErrInternalError):
+				log.Error(err)
+				debug.PrintStack()
 				statusCode = http.StatusInternalServerError
 			case errors.Is(err, ErrNoContent):
 				statusCode = http.StatusNoContent

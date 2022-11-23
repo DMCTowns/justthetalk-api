@@ -1,0 +1,13 @@
+version: "3"
+
+dotenv: ["./env.local"]
+
+vars:
+  CURRENT_DIR:
+    sh: pwd
+
+tasks:
+  api/start:
+    desc: start API server
+    cmds:
+      - go run main.go

@@ -1,0 +1,11 @@
+http://justthetalk-local.com {  
+  reverse_proxy host.docker.internal:3000
+}
+
+http://www.justthetalk-local.com {  
+  reverse_proxy host.docker.internal:3000
+}
+
+http://api.justthetalk-local.com {  
+  reverse_proxy host.docker.internal:8080
+}

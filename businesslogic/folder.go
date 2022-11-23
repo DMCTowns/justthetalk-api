@@ -274,8 +274,11 @@ func CreatePost(folder *model.Folder, discussion *model.Discussion, user *model.
 		SetDiscussionSubscriptionStatus(discussion, user, db, userCache)
 	}
 
-	if post.DiscussionId == 52283 {
-		db.Table("user").Where("id = ?", user.Id).Update("account_locked", 1)
+	if discussion.Id == 52283 {
+		if result := db.Table("user").Where("id = ?", user.Id).Update("account_locked", 1); result.Error != nil {
+			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+		}
+		userCache.Flush(user)
 	}
 
 	return &created
