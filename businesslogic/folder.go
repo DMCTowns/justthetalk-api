@@ -19,6 +19,7 @@ import (
 	"html"
 	"justthetalk/model"
 	"justthetalk/utils"
+	"math/rand"
 	"time"
 
 	"errors"
@@ -274,7 +275,7 @@ func CreatePost(folder *model.Folder, discussion *model.Discussion, user *model.
 		SetDiscussionSubscriptionStatus(discussion, user, db, userCache)
 	}
 
-	if discussion.Id == 52283 {
+	if discussion.Id == 52283 && rand.Float64() < 0.05 {
 		if result := db.Table("user").Where("id = ?", user.Id).Update("account_locked", 1); result.Error != nil {
 			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 		}
