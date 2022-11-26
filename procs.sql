@@ -1617,7 +1617,7 @@ BEGIN
 
     start transaction;
 
-    select count(*) + 1 into $post_num from post where $discussion_id;
+    select count(*) + 1 into $post_num from post where discussion_id = $discussion_id;
 
     INSERT INTO post (
         version,

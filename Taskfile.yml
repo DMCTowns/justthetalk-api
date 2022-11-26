@@ -11,3 +11,8 @@ tasks:
     desc: start API server
     cmds:
       - go run main.go
+
+  vscode:
+    desc: run vscode
+    cmds:
+      - /usr/local/bin/code .

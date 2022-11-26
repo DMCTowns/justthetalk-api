@@ -39,13 +39,17 @@ type siteVerifyResponse struct {
 }
 
 func CreateJWT(user *model.User, expiresAt time.Time, purpose string) string {
+	domain := "justthetalk.com"
+	if d, ok := os.LookupEnv("DOMAIN"); ok {
+		domain = d
+	}
 
 	claims := model.UserClaims{
 		UserId:  user.Id,
 		Purpose: purpose,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expiresAt.Unix(),
-			Issuer:    "justthetalk.com",
+			Issuer:    domain,
 		},
 	}
 

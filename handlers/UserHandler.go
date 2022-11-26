@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -593,9 +594,14 @@ func (h *UserHandler) createRefreshTokenCookie(user *model.User) *http.Cookie {
 		sameSiteMode = http.SameSiteLaxMode
 	}
 
+	domain := "justthetalk.com"
+	if d, ok := os.LookupEnv("DOMAIN"); ok {
+		domain = d
+	}
+
 	return &http.Cookie{
 		Name:     "refresh-token",
-		Domain:   "justthetalk.com",
+		Domain:   domain,
 		Path:     "/",
 		Value:    utils.CreateJWT(user, time.Now().Add(time.Hour*720), model.UserClaimPurposeRefreshToken),
 		HttpOnly: true,
@@ -607,6 +613,10 @@ func (h *UserHandler) createRefreshTokenCookie(user *model.User) *http.Cookie {
 }
 
 func (h *UserHandler) expiredRefreshTokenCookie() *http.Cookie {
+	domain := "justthetalk.com"
+	if d, ok := os.LookupEnv("DOMAIN"); ok {
+		domain = d
+	}
 
 	sameSiteMode := http.SameSiteNoneMode
 	if !h.useSecureCookies {
@@ -615,7 +625,7 @@ func (h *UserHandler) expiredRefreshTokenCookie() *http.Cookie {
 
 	return &http.Cookie{
 		Name:     "refresh-token",
-		Domain:   "justthetalk.com",
+		Domain:   domain,
 		Path:     "/",
 		Value:    "",
 		HttpOnly: true,
