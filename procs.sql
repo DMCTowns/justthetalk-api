@@ -389,11 +389,25 @@ DELIMITER //
 CREATE PROCEDURE set_post_status(IN $discussion_id bigint, IN $post_id bigint, IN $status int, IN $moderation_result int)
 BEGIN
 
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+    start transaction;
+
     update post
     set status = $status,
     moderation_result = $moderation_result
     where id = $post_id
     and discussion_id = $discussion_id;
+
+    delete from moderation_queue
+    where post_id = $post_id;
+
+    commit work;
 
     call get_post($post_id);
 

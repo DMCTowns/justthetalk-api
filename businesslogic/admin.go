@@ -210,13 +210,12 @@ func CreateComment(comment *model.ModeratorComment, folder *model.Folder, discus
 		targetUser := userCache.Get(post.CreatedByUserId)
 		CreateUserHistory(model.UserHistoryAdminPostModerated, fmt.Sprintf("PostId: %d, %s", post.Id, result), targetUser, db)
 
-		var post model.Post
-		if result := db.Raw("call set_post_status(?, ?, ?, ?)", discussion.Id, post.Id, post.Status, totalVote).First(&post); result.Error != nil {
+		if result := db.Raw("call set_post_status(?, ?, ?, ?)", discussion.Id, post.Id, post.Status, totalVote).First(post); result.Error != nil {
 			utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 		}
 
 		post.Markup = PostFormatter().ApplyPostFormatting(post.Text, discussion)
-		post.Url = utils.UrlForPost(folder, discussion, &post)
+		post.Url = utils.UrlForPost(folder, discussion, post)
 
 	}
 
