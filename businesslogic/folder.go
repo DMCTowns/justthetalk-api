@@ -16,6 +16,7 @@
 package businesslogic
 
 import (
+	"fmt"
 	"html"
 	"justthetalk/model"
 	"justthetalk/utils"
@@ -335,10 +336,10 @@ func DeletePost(folder *model.Folder, discussion *model.Discussion, user *model.
 
 }
 
-func GetPost(postId uint, db *gorm.DB) *model.Post {
+func GetPost(postId uint, db *gorm.DB) (*model.Post, error) {
 	var post model.Post
 	if result := db.Raw("call get_post(?)", postId).First(&post); result.Error != nil {
-		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+		return nil, fmt.Errorf("fetching post: %w", result.Error)
 	}
-	return &post
+	return &post, nil
 }

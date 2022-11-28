@@ -635,7 +635,10 @@ func CreateReport(reportData *model.PostReport, userCache *UserCache, db *gorm.D
 		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
 	}
 
-	post := GetPost(reportData.PostId, db)
+	post, err := GetPost(reportData.PostId, db)
+	if err != nil {
+		utils.PanicWithWrapper(err, utils.ErrInternalError)
+	}
 	targetUser := userCache.Get(post.CreatedByUserId)
 
 	CreateUserHistory(model.UserHistoryUserPostReported, fmt.Sprintf("PostId: %d, Reported by: %s(%s)", reportData.PostId, reportData.ReporterName, reportData.ReporterEmail), targetUser, db)

@@ -314,7 +314,7 @@ func TestDeletePostFailsForOtherPeople(t *testing.T) {
 	discussion := discussionCache.Get(1, user)
 
 	connections.WithDatabase(10*time.Second, func(db *gorm.DB) {
-		post := GetPost(1, db)
+		post, _ := GetPost(1, db)
 		DeletePost(folder, discussion, user, post.Id, db)
 	})
 

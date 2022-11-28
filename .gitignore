@@ -3,3 +3,4 @@ env.local
 go.sum
 .vscode
 local
+__debug_bin

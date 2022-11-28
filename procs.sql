@@ -14,7 +14,7 @@
 -- along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-# ssh -N -L 3307:beta.justthetalk.com:3306 jdudmesh@beta.justthetalk.com
+-- ssh -N -L 3307:beta.justthetalk.com:3306 jdudmesh@beta.justthetalk.com
 create database notthetalk CHARACTER SET = 'utf8' collate = 'utf8_general_ci';
 create user 'notthetalk'@'%' identified WITH mysql_native_password by 'notthetalk';
 grant all privileges on notthetalk.* to 'notthetalk'@'%';

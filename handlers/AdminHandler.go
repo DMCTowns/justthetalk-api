@@ -138,7 +138,10 @@ func (h *AdminHandler) CreateComment(res http.ResponseWriter, req *http.Request)
 
 		discussion := h.discussionCache.Get(discussionId, user)
 		folder := h.folderCache.Get(discussion.FolderId, user)
-		post := businesslogic.GetPost(postId, db)
+		post, err := businesslogic.GetPost(postId, db)
+		if err != nil {
+			utils.PanicWithWrapper(err, utils.ErrInternalError)
+		}
 
 		if post.DiscussionId != discussionId {
 			panic(utils.ErrBadRequest)

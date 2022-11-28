@@ -81,9 +81,9 @@ func OpenConnections(dbHost string, dbPort string, redisHost string, redisPort s
 
 }
 
-// func DatabaseConnection() *gorm.DB {
-// 	return databaseConnection
-// }
+func DatabaseConnection() *gorm.DB {
+	return databaseConnection
+}
 
 func RedisConnection() *redis.Client {
 	return redisConnection
