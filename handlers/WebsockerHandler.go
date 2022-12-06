@@ -290,7 +290,7 @@ func (client *websocketClient) send(message string) error {
 		}
 	}()
 
-	log.Debug("Sending: " + message)
+	//log.Debug("Sending: " + message)
 
 	err := client.connection.SetWriteDeadline(time.Now().Add(writeWait))
 	if err != nil {
@@ -333,10 +333,10 @@ func (client *websocketClient) processMessage(msg string) {
 	case "hello":
 		go client.hello(f[1])
 	case "ping":
-		log.Debug("Got ping")
+		//log.Debug("Got ping")
 		client.sendPong()
 	case "pong":
-		log.Debug("Got pong")
+		//log.Debug("Got pong")
 	}
 
 }

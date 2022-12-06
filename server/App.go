@@ -196,6 +196,8 @@ func (a *App) configureUserRouter(router *mux.Router, platform string) {
 	userRouter.HandleFunc("/viewtype", userHandler.UpdateViewType).Methods(http.MethodPut, http.MethodOptions)
 	userRouter.HandleFunc("/forgotpassword", userHandler.ForgotPassword).Methods(http.MethodPost, http.MethodOptions)
 	userRouter.HandleFunc("/password/validatekey", userHandler.ValidatePasswordResetKey).Methods(http.MethodGet, http.MethodOptions)
+	userRouter.HandleFunc("/password/fromkey", userHandler.ResetPasswordFromKey).Methods(http.MethodPut, http.MethodOptions)
+
 	userRouter.HandleFunc("/account/confirm", userHandler.ValidateSignupConfirmationKey).Methods(http.MethodGet, http.MethodOptions)
 
 	userRouter.HandleFunc("/discussion/{discussionId:[0-9]+}/bookmark", userHandler.DeleteDiscussionBookmark).Methods(http.MethodDelete, http.MethodOptions)

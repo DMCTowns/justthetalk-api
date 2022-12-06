@@ -412,7 +412,7 @@ func ForgotPassword(credentials *model.LoginCredentials, ipAddress string, userC
 
 }
 
-func ValidatePasswordResetKey(key string, userCache *UserCache, db *gorm.DB) (*model.User, *model.PasswordResetRequest) {
+func ValidatePasswordResetKey(key string, userCache *UserCache, db *gorm.DB) (*model.PasswordResetRequest, error) {
 
 	if _, err := uuid.Parse(key); err != nil {
 		panic(utils.ErrBadRequest)
@@ -421,83 +421,74 @@ func ValidatePasswordResetKey(key string, userCache *UserCache, db *gorm.DB) (*m
 	var request model.PasswordResetRequest
 	if result := db.Raw("call find_password_reset_request(?)", key).Take(&request); result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			panic(utils.ErrBadRequest)
+			return nil, errors.New("key not found")
 		}
-		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
+		return nil, utils.ErrInternalError
 	}
 
 	if request.CreatedDate.Add(time.Hour).Before(time.Now()) {
-		utils.PanicWithWrapper(errors.New("Reset token not valid"), utils.ErrExpired)
+		return nil, utils.ErrExpired
 	}
 
-	if result := db.Table("user").Where("id = ?", request.UserId).Update("password_expired", 1); result.Error != nil {
-		utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-	}
-
-	user := userCache.Get(request.UserId)
-	user.PasswordExpired = true
-
-	return user, &request
+	return &request, nil
 
 }
 
-func UpdatePassword(user *model.User, updateData *model.UserOptionsUpdateData, userCache *UserCache, db *gorm.DB) {
+func UpdatePassword(user *model.User, updateData *model.UserOptionsUpdateData, userCache *UserCache, db *gorm.DB) *model.User {
 
 	if len(updateData.NewPassword) < 8 {
 		utils.PanicWithWrapper(errors.New("Passwords must be at least 8 characters long"), utils.ErrBadRequest)
 	}
 
+	var userId uint
+
 	err := db.Transaction(func(tx *gorm.DB) error {
-
-		var err error
-
-		if len(updateData.OldPassword) > 0 {
+		if user != nil {
 
 			passwordHashBytes := sha256.Sum256([]byte(updateData.OldPassword))
 			passwordHash := fmt.Sprintf("%x", passwordHashBytes)
 
 			if result := tx.Raw("call find_user(?, ?)", user.Username, passwordHash).Take(user); result.Error != nil {
 				if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-					err = utils.ErrUnauthorised
-				} else {
-					err = result.Error
+					return utils.ErrUnauthorised
 				}
-			} else if user.ModelBase.Id == 0 {
-				err = utils.ErrUnauthorised
+				return fmt.Errorf("fetching user: %w", result.Error)
 			}
+			if user.ModelBase.Id == 0 {
+				return utils.ErrUnauthorised
+			}
+
+			userId = user.Id
 
 		} else if len(updateData.ResetKey) > 0 {
-			matchingUser, resetRequest := ValidatePasswordResetKey(updateData.ResetKey, userCache, tx)
-			if matchingUser.Id != user.Id {
-				err = utils.ErrBadRequest
+			resetRequest, err := ValidatePasswordResetKey(updateData.ResetKey, userCache, tx)
+			if err != nil {
+				return err
 			}
-			if result := tx.Table("password_reset").Delete(&resetRequest); result.Error != nil {
-				err = result.Error
+			if result := tx.Raw("delete from password_reset where id = ?", resetRequest.Id); result.Error != nil {
+				return fmt.Errorf("clearing password request: %w", result.Error)
 			}
+			userId = resetRequest.UserId
 		} else {
-			err = utils.ErrBadRequest
+			return utils.ErrBadRequest
 		}
 
-		if err == nil {
-
-			passwordHashBytes := sha256.Sum256([]byte(updateData.NewPassword))
-			passwordHash := fmt.Sprintf("%x", passwordHashBytes)
-			if result := tx.Raw("call update_user_password(?, ?)", user.Id, passwordHash).Scan(user); result.Error != nil {
-				utils.PanicWithWrapper(result.Error, utils.ErrInternalError)
-			}
-
-			userCache.Flush(user)
-
+		passwordHashBytes := sha256.Sum256([]byte(updateData.NewPassword))
+		passwordHash := fmt.Sprintf("%x", passwordHashBytes)
+		if result := tx.Raw("call update_user_password(?, ?)", userId, passwordHash).Scan(user); result.Error != nil {
+			return fmt.Errorf("updating password: %w", result.Error)
 		}
 
-		return err
+		userCache.FlushById(userId)
 
+		return nil
 	})
 
 	if err != nil {
 		panic(err)
 	}
 
+	return userCache.Get(userId)
 }
 
 func ValidateSignupConfirmationKey(key string, ipAddress string, userCache *UserCache, db *gorm.DB) (*model.User, error) {

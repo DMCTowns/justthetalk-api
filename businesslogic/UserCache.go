@@ -113,9 +113,13 @@ func (cache *UserCache) Put(user *model.User) {
 }
 
 func (cache *UserCache) Flush(user *model.User) {
-	userKey := fmt.Sprintf("U%d", user.Id)
+	cache.FlushById(user.Id)
+}
+
+func (cache *UserCache) FlushById(userId uint) {
+	userKey := fmt.Sprintf("U%d", userId)
 	connections.RedisConnection().Del(context.Background(), userKey)
-	dataKey := fmt.Sprintf("US%d", user.Id)
+	dataKey := fmt.Sprintf("US%d", userId)
 	connections.RedisConnection().Del(context.Background(), dataKey)
 }
 

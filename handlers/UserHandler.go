@@ -262,8 +262,10 @@ func (h *UserHandler) UpdatePassword(res http.ResponseWriter, req *http.Request)
 			utils.PanicWithWrapper(err, utils.ErrBadRequest)
 		}
 
-		if err := utils.ValidateRecaptchaResponse(updateData.RecaptchaResponse); err != nil {
-			utils.PanicWithWrapper(utils.ErrBadRequest, err)
+		if h.useSecureCookies {
+			if err := utils.ValidateRecaptchaResponse(updateData.RecaptchaResponse); err != nil {
+				utils.PanicWithWrapper(utils.ErrBadRequest, err)
+			}
 		}
 
 		businesslogic.UpdatePassword(user, &updateData, h.userCache, db)
@@ -532,8 +534,10 @@ func (h *UserHandler) ForgotPassword(res http.ResponseWriter, req *http.Request)
 			utils.PanicWithWrapper(utils.ErrBadRequest, errors.New("Invalid e-mail address"))
 		}
 
-		if err := utils.ValidateRecaptchaResponse(credentials.RecaptchaResponse); err != nil {
-			utils.PanicWithWrapper(utils.ErrBadRequest, err)
+		if h.useSecureCookies {
+			if err := utils.ValidateRecaptchaResponse(credentials.RecaptchaResponse); err != nil {
+				utils.PanicWithWrapper(utils.ErrBadRequest, err)
+			}
 		}
 
 		request := businesslogic.ForgotPassword(&credentials, utils.ExtractIPAdress(req), h.userCache, db)
@@ -555,12 +559,39 @@ func (h *UserHandler) ValidatePasswordResetKey(res http.ResponseWriter, req *htt
 			panic(utils.ErrBadRequest)
 		}
 
-		user, _ := businesslogic.ValidatePasswordResetKey(resetKey, h.userCache, db)
+		passwordRequest, err := businesslogic.ValidatePasswordResetKey(resetKey, h.userCache, db)
+		if err != nil {
+			if errors.Is(err, utils.ErrExpired) {
+				return http.StatusNotAcceptable, passwordRequest, "Key has expired"
+			}
+			panic(err)
+		}
 
-		responseData, _ := h.sendUserWithNewAccessToken(user)
+		return http.StatusOK, passwordRequest, "key is valid"
 
-		return http.StatusOK, responseData, "Login successful"
+	})
+}
 
+func (h *UserHandler) ResetPasswordFromKey(res http.ResponseWriter, req *http.Request) {
+	utils.AnonymousHandlerFunction(res, req, func(res http.ResponseWriter, req *http.Request, db *gorm.DB) (int, interface{}, string) {
+
+		var updateData model.UserOptionsUpdateData
+		if err := json.NewDecoder(req.Body).Decode(&updateData); err != nil {
+			utils.PanicWithWrapper(err, utils.ErrBadRequest)
+		}
+
+		if h.useSecureCookies {
+			if err := utils.ValidateRecaptchaResponse(updateData.RecaptchaResponse); err != nil {
+				utils.PanicWithWrapper(utils.ErrBadRequest, err)
+			}
+		}
+
+		user := businesslogic.UpdatePassword(nil, &updateData, h.userCache, db)
+
+		responseData, cookie := h.sendUserWithNewAccessToken(user)
+		http.SetCookie(res, cookie)
+
+		return http.StatusOK, responseData, "Password updated"
 	})
 }
 
