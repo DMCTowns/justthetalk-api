@@ -2509,9 +2509,9 @@ DELIMITER //
 CREATE PROCEDURE delete_discussion_subscription(IN $user_id bigint, IN $discussion_id bigint)
 BEGIN
 
-    delete from subscription s
-    where s.discussion_id = $discussion_id
-    and s.user_id = $user_id;
+    delete from subscription
+    where discussion_id = $discussion_id
+    and user_id = $user_id;
 
 END //
 DELIMITER ;
@@ -2537,14 +2537,14 @@ BEGIN
 
     delete folder_subscription_exception
     from folder_subscription_exception
-    inner join folder_subscription s
-    on folder_subscription_exception.subscription_id = s.id
-    where s.folder_id = $folder_id
-    and s.user_id = $user_id;
+    inner join folder_subscription
+    on folder_subscription_exception.subscription_id = folder_subscription.id
+    where folder_subscription.folder_id = $folder_id
+    and folder_subscription.user_id = $user_id;
 
-    delete from folder_subscription s
-    where s.folder_id = $folder_id
-    and s.user_id = $user_id;
+    delete from folder_subscription
+    where folder_id = $folder_id
+    and user_id = $user_id;
 
     commit work;
 

@@ -45,6 +45,8 @@ func main() {
 		log.Fatal("Recaptcha key missing")
 	}
 
+	dbUser := "notthetalk"
+	dbPwd := "notthetalk"
 	dbHost := "localhost"
 	dbPort := "3306"
 	redisHost := "localhost"
@@ -59,6 +61,14 @@ func main() {
 		dbPort = value
 	}
 
+	if value, exists := os.LookupEnv("DB_USER"); exists {
+		dbUser = value
+	}
+
+	if value, exists := os.LookupEnv("DB_PWD"); exists {
+		dbPwd = value
+	}
+
 	if value, exists := os.LookupEnv("REDIS_HOST"); exists {
 		redisHost = value
 	}
@@ -71,7 +81,7 @@ func main() {
 		elasticsearchHosts = strings.Split(value, ",")
 	}
 
-	connections.OpenConnections(dbHost, dbPort, redisHost, redisPort, elasticsearchHosts)
+	connections.OpenConnections(dbHost, dbPort, dbUser, dbPwd, redisHost, redisPort, elasticsearchHosts)
 
 	if len(os.Args) == 1 {
 		startServer()

@@ -28,13 +28,15 @@ import (
 
 func TestMain(m *testing.M) {
 
+	dbUser := "notthetalk"
+	dbPwd := "notthetalk"
 	dbHost := "localhost"
 	dbPort := "3306"
 	redisHost := "localhost"
 	redisPort := "6379"
 	elasticsearchHosts := []string{"http://localhost:9200"}
 
-	connections.OpenConnections(dbHost, dbPort, redisHost, redisPort, elasticsearchHosts)
+	connections.OpenConnections(dbHost, dbPort, dbUser, dbPwd, redisHost, redisPort, elasticsearchHosts)
 
 	connections.RedisConnection().FlushAll(context.Background())
 

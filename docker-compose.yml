@@ -29,7 +29,8 @@ services:
       - bootstrap.memory_lock=true
       - 'OPENSEARCH_JAVA_OPTS=-Xms256m -Xmx256m'
     volumes:
-      - ./local/opensearch/opensearch.yml:/usr/share/opensearch/config/opensearch.yml
+      # - ./local/opensearch/opensearch.yml:/usr/share/opensearch/config/opensearch.yml
+      - ./opensearch/data:/usr/share/opensearch/data
     ports:
       - '9200:9200'
 

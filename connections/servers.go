@@ -36,13 +36,13 @@ var esConnection *elasticsearch.Client
 
 type DatabaseWithContextTarget func(db *gorm.DB)
 
-func OpenConnections(dbHost string, dbPort string, redisHost string, redisPort string, elasticsearchHosts []string) {
+func OpenConnections(dbHost string, dbPort string, dbUser string, dbPwd string, redisHost string, redisPort string, elasticsearchHosts []string) {
 
 	var err error
 
 	once.Do(func() {
 
-		log.Infof("Connecting to database: %s:%s", dbHost, dbPort)
+		log.Infof("Connecting to database: %s@xxxxxxxx%s:%s", dbUser, dbHost, dbPort)
 
 		newLogger := logger.New(
 			log.New(), // io writer
@@ -53,7 +53,7 @@ func OpenConnections(dbHost string, dbPort string, redisHost string, redisPort s
 			},
 		)
 
-		databaseDsn := fmt.Sprintf("notthetalk:notthetalk@tcp(%s:%s)/notthetalk?charset=utf8mb4&parseTime=True&loc=UTC", dbHost, dbPort)
+		databaseDsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/notthetalk?charset=utf8mb4&parseTime=True&loc=UTC", dbUser, dbPwd, dbHost, dbPort)
 		databaseConnection, err = gorm.Open(mysql.Open(databaseDsn), &gorm.Config{Logger: newLogger})
 		if err != nil {
 			log.Panic(err)
