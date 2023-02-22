@@ -54,6 +54,12 @@ var (
 		"https://beta.justthetalk.com":  true,
 		"https://justthetalk.com.":      true,
 		"https://justthetalk.com":       true,
+		"https://justthetalk.co.uk.":      true,
+		"https://justthetalk.co.uk":       true,
+		"https://www.justthetalk.co.uk.":      true,
+		"https://www.justthetalk.co.uk":       true,
+		"http://localhost.":      true,
+		"http://localhost":       true,
 	}
 )
 

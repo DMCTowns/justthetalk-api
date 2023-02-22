@@ -14,7 +14,7 @@
 -- along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
--- ssh -N -L 3307:beta.justthetalk.com:3306 jdudmesh@beta.justthetalk.com
+-- ssh -N -L 3307:www.justthetalk.co.uk:3306 jdudmesh@www.justthetalk.co.uk
 
 
 -- create user 'notthetalk_app'@'%' identified WITH mysql_native_password by 'BeXuPHa3uC4c';
@@ -64,7 +64,7 @@ create unique index idx_password_reset_reset_key on password_reset(reset_key);
 drop index idx_front_page_entry_last_post on front_page_entry;
 create index idx_front_page_entry_last_post on front_page_entry(last_post);
 
----------------------------------------------
+--
 
 DROP PROCEDURE IF EXISTS get_folders;
 DELIMITER //
@@ -1512,7 +1512,7 @@ BEGIN
 
 	drop table if exists most_active;
 
-    create temporary table most_active (
+    create table most_active (
         discussion_id bigint not null references discussion(id),
         count_of_posts int,
         last_created_date datetime

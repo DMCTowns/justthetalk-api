@@ -13,14 +13,14 @@
   <p>Thank you for signing up to JUSTtheTalk. Welcome aboard! We hope that you enjoy the time you spend here. In order to prevent abuse
   of the site you must confirm your e-mail address before you can log in. To confirm your e-mail address, click on the link...</p>
   <div>
-	  <a href="https://beta.justthetalk.com/confirm/{{.ConfirmationKey}}">https://beta.justthetalk.com/confirm/{{.ConfirmationKey}}</a>
+	  <a href="https://www.justthetalk.co.uk/confirm/{{.ConfirmationKey}}">https://www.justthetalk.co.uk/confirm/{{.ConfirmationKey}}</a>
   </div>
   <p>Once you have confirmed your e-mail address you can start posting but your initial posts will be moderated automatically. Don't panic, we do this to
   stop people abusing the site and its users. You'll soon be a fully fledged poster!</p>
   <br/>
-  <p>If you have any problems, please contact <a href="mailto:help@justthetalk.com">help@justthetalk.com</a></p>
+  <p>If you have any problems, please contact <a href="mailto:help@justthetalk.co.uk">help@justthetalk.co.uk</a></p>
   <br/>
-  <p>If you forget your password you can reset it by following this link: <a href="https://beta.justhetalk.com/forgotpassword">https://beta.justthetalk.com/forgotpassword</a></p>
+  <p>If you forget your password you can reset it by following this link: <a href="https://beta.justhetalk.com/forgotpassword">https://www.justthetalk.co.uk/forgotpassword</a></p>
   <br/>
   <br/>
   <p>Best Regards,</p>

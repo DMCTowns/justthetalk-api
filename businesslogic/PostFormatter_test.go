@@ -31,7 +31,7 @@ func TestFormatting1(t *testing.T) {
 	result := formatter.ApplyPostFormatting(discussion.Header, discussion)
 	t.Log(result)
 
-	expected := `<div><p>See post <a href="/userspace/47/thread-to-practise-formatting/1">#1</a>...</p><p></p><p>	There&#39;s a new version of the site to test on <a href="https://beta.justthetalk.com" rel='nofollow'>https://beta.justthetalk.com</a></p></div>`
+	expected := `<div><p>See post <a href="/userspace/47/thread-to-practise-formatting/1">#1</a>...</p><p></p><p>	There&#39;s a new version of the site to test on <a href="https://www.justthetalk.co.uk" rel='nofollow'>https://www.justthetalk.co.uk</a></p></div>`
 
 	if len(result) != len(expected) {
 		t.Errorf("Length mismatch %d vs %d", len(result), len(expected))
