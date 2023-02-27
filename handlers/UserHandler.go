@@ -625,7 +625,7 @@ func (h *UserHandler) createRefreshTokenCookie(user *model.User) *http.Cookie {
 		sameSiteMode = http.SameSiteLaxMode
 	}
 
-	domain := "www.justthetalk.co.uk"
+	domain := "justthetalk.co.uk"
 	if d, ok := os.LookupEnv("DOMAIN"); ok {
 		domain = d
 	}
@@ -644,7 +644,7 @@ func (h *UserHandler) createRefreshTokenCookie(user *model.User) *http.Cookie {
 }
 
 func (h *UserHandler) expiredRefreshTokenCookie() *http.Cookie {
-	domain := "www.justthetalk.co.uk"
+	domain := "justthetalk.co.uk"
 	if d, ok := os.LookupEnv("DOMAIN"); ok {
 		domain = d
 	}

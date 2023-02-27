@@ -39,7 +39,7 @@ type siteVerifyResponse struct {
 }
 
 func CreateJWT(user *model.User, expiresAt time.Time, purpose string) string {
-	domain := "www.justthetalk.co.uk"
+	domain := "justthetalk.co.uk"
 	if d, ok := os.LookupEnv("DOMAIN"); ok {
 		domain = d
 	}
