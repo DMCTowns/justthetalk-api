@@ -1,41 +1,43 @@
 # https://pentacent.medium.com/nginx-and-lets-encrypt-with-docker-in-less-than-5-minutes-b4b8a60d3a71
-# ssh -N -L 15672:beta.justthetalk.com:15672 jdudmesh@beta.justthetalk.com
-version: "3.9"
+# ssh -N -L 15672:www.justthetalk.co.uk:15672 jdudmesh@www.justthetalk.co.uk
+version: '3.9'
 
 services:
-  mysql:
-    image: arm64v8/mysql:latest
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./local/mysql/data:/var/lib/mysql
-      - ./local/mysql/backups:/backups
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: CKYwALUCTIOnEsiNGTRoTiO
-      MYSQL_DATABASE: notthetalk
+  # mysql:
+  #   image: mysql:latest
+  #   ports:
+  #     - '3306:3306'
+  #   volumes:
+  #     - ./local/mysql/data:/var/lib/mysql
+  #     - ./local/mysql/backups:/backups
+  #   restart: always
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: CKYwALUCTIOnEsiNGTRoTiO
+  #     MYSQL_DATABASE: notthetalk
+  #     MYSQL_ROOT_HOST: '%'
 
   redis:
     image: redis
     volumes:
       - ./local/redis:/data
     ports:
-      - "6379:6379"
+      - '6379:6379'
 
-  search:
-    image: opensearchproject/opensearch
-    environment:
-      - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms256m -Xmx256m"
-    volumes:
-      - ./local/opensearch/opensearch.yml:/usr/share/opensearch/config/opensearch.yml
-    ports:
-      - "9200:9200"
+  # search:
+  #   image: opensearchproject/opensearch
+  #   environment:
+  #     - bootstrap.memory_lock=true
+  #     - 'OPENSEARCH_JAVA_OPTS=-Xms256m -Xmx256m'
+  #   volumes:
+  #     # - ./local/opensearch/opensearch.yml:/usr/share/opensearch/config/opensearch.yml
+  #     - ./opensearch/data:/usr/share/opensearch/data
+  #   ports:
+  #     - '9200:9200'
 
   caddy:
     image: caddy:2-alpine
     ports:
-      - "80:80"
+      - '80:80'
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./local/caddy/certs:/etc/caddy/certs

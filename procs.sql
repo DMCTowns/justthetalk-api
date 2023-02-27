@@ -14,35 +14,33 @@
 -- along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
--- ssh -N -L 3307:beta.justthetalk.com:3306 jdudmesh@beta.justthetalk.com
-create database notthetalk CHARACTER SET = 'utf8' collate = 'utf8_general_ci';
-create user 'notthetalk'@'%' identified WITH mysql_native_password by 'notthetalk';
-grant all privileges on notthetalk.* to 'notthetalk'@'%';
+-- ssh -N -L 3307:www.justthetalk.co.uk:3306 jdudmesh@www.justthetalk.co.uk
 
-create user 'notthetalk_app'@'%' identified WITH mysql_native_password by 'BeXuPHa3uC4c';
-grant all privileges on notthetalk.* to 'notthetalk_app'@'%';
-flush privileges;
 
-INSERT INTO `notthetalk`.`user` (`version`, `account_expired`, `account_locked`, `bio`, `email`, `enabled`, `password`, `password_expired`, `username`, `display_email`, `created_date`, `last_updated`, `last_login_date`, `subject`, `email_verified`)
-VALUES ('1', 0, 0, 'test user', 'test@notthetalk.com', 1, 'c775e7b757ede630cd0aa1113bd102661ab38829ca52a6422ab782862f268646', 0, 'testuser1', 1, '2011-02-27 23:58:48', '2014-01-30 22:36:13', '2013-03-16 07:32:38', 'johndudmesh123456', 1);
+-- create user 'notthetalk_app'@'%' identified WITH mysql_native_password by 'BeXuPHa3uC4c';
+-- grant all privileges on notthetalk.* to 'notthetalk_app'@'%';
+-- flush privileges;
 
-delete ud  from user_discussion ud inner join (select min(id) dupe_id from user_discussion group by user_id, discussion_id having count(*) > 1) ud2 on ud.id = ud2.dupe_id;
+-- INSERT INTO `notthetalk`.`user` (`version`, `account_expired`, `account_locked`, `bio`, `email`, `enabled`, `password`, `password_expired`, `username`, `display_email`, `created_date`, `last_updated`, `last_login_date`, `subject`, `email_verified`)
+-- VALUES ('1', 0, 0, 'test user', 'test@notthetalk.com', 1, 'c775e7b757ede630cd0aa1113bd102661ab38829ca52a6422ab782862f268646', 0, 'testuser1', 1, '2011-02-27 23:58:48', '2014-01-30 22:36:13', '2013-03-16 07:32:38', 'johndudmesh123456', 1);
+
+-- delete ud  from user_discussion ud inner join (select min(id) dupe_id from user_discussion group by user_id, discussion_id having count(*) > 1) ud2 on ud.id = ud2.dupe_id;
 drop index idx_userdiscussion_userid_discussionid on user_discussion;
 create unique index idx_userdiscussion_userid_discussionid on user_discussion(user_id, discussion_id);
 
-create table discussion_activity (
-    discussion_id bigint not null unique references discussion(id),
-    post_count int,
-    last_created_date datetime
-);
+-- create table discussion_activity (
+--     discussion_id bigint not null unique references discussion(id),
+--     post_count int,
+--     last_created_date datetime
+-- );
 
-create index idx_discussion_activity_post_count on discussion_activity(post_count);
+-- create index idx_discussion_activity_post_count on discussion_activity(post_count);
 
-alter table ignore_user add column created_date datetime not null default UTC_TIMESTAMP();
-alter table user_options add column view_type varchar(16) not null default 'latest';
-alter table user_options add column subs_fetch_order int not null default 0;
-alter table user_options add column subs_fetch_order int not null default 0;
-alter table front_page_entry add column zorder int not null default 0;
+-- alter table ignore_user add column created_date datetime not null default UTC_TIMESTAMP();
+-- alter table user_options add column view_type varchar(16) not null default 'latest';
+-- alter table user_options add column subs_fetch_order int not null default 0;
+-- alter table user_options add column subs_fetch_order int not null default 0;
+-- alter table front_page_entry add column zorder int not null default 0;
 
 -- create table user_post_bookmark (
 --     id int not null primary key,
@@ -52,20 +50,21 @@ alter table front_page_entry add column zorder int not null default 0;
 --     post_id int not null references post(id)
 -- );
 
-alter table user add column email_verified int not null default 0;
-update user set email_verified = 1 where id > 0;
+-- alter table user add column email_verified int not null default 0;
+-- update user set email_verified = 1 where id > 0;
 
-alter table password_reset add column created_date datetime not null default UTC_TIMESTAMP();
-alter table password_reset add column ip_address varchar(15);
+-- alter table password_reset add column created_date datetime not null default UTC_TIMESTAMP();
+-- alter table password_reset add column ip_address varchar(15);
+drop index idx_password_reset_reset_key on password_reset;
 create unique index idx_password_reset_reset_key on password_reset(reset_key);
 
-alter table user_discussion add column created_date datetime not null default UTC_TIMESTAMP();
+-- alter table user_discussion add column created_date datetime not null default UTC_TIMESTAMP();
 
-alter table front_page_entry  modify last_post datetime(6) null;
+-- alter table front_page_entry  modify last_post datetime(6) null;
 drop index idx_front_page_entry_last_post on front_page_entry;
 create index idx_front_page_entry_last_post on front_page_entry(last_post);
 
----------------------------------------------
+--
 
 DROP PROCEDURE IF EXISTS get_folders;
 DELIMITER //
@@ -1513,7 +1512,7 @@ BEGIN
 
 	drop table if exists most_active;
 
-    create temporary table most_active (
+    create table most_active (
         discussion_id bigint not null references discussion(id),
         count_of_posts int,
         last_created_date datetime
@@ -2510,9 +2509,9 @@ DELIMITER //
 CREATE PROCEDURE delete_discussion_subscription(IN $user_id bigint, IN $discussion_id bigint)
 BEGIN
 
-    delete from subscription s
-    where s.discussion_id = $discussion_id
-    and s.user_id = $user_id;
+    delete from subscription
+    where discussion_id = $discussion_id
+    and user_id = $user_id;
 
 END //
 DELIMITER ;
@@ -2538,14 +2537,14 @@ BEGIN
 
     delete folder_subscription_exception
     from folder_subscription_exception
-    inner join folder_subscription s
-    on folder_subscription_exception.subscription_id = s.id
-    where s.folder_id = $folder_id
-    and s.user_id = $user_id;
+    inner join folder_subscription
+    on folder_subscription_exception.subscription_id = folder_subscription.id
+    where folder_subscription.folder_id = $folder_id
+    and folder_subscription.user_id = $user_id;
 
-    delete from folder_subscription s
-    where s.folder_id = $folder_id
-    and s.user_id = $user_id;
+    delete from folder_subscription
+    where folder_id = $folder_id
+    and user_id = $user_id;
 
     commit work;
 

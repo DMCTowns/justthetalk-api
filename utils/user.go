@@ -39,7 +39,7 @@ type siteVerifyResponse struct {
 }
 
 func CreateJWT(user *model.User, expiresAt time.Time, purpose string) string {
-	domain := "justthetalk.com"
+	domain := "justthetalk.co.uk"
 	if d, ok := os.LookupEnv("DOMAIN"); ok {
 		domain = d
 	}
@@ -96,8 +96,9 @@ func ValidateRecaptchaResponse(recaptchaResponse string) error {
 		return errors.New("unsuccessful recaptcha verify request")
 	}
 
-	if body.ChallengeTS.Add(5 * time.Minute).Before(time.Now()) {
-		return errors.New("Recaptcha expired")
+	// Check response score.
+	if body.Score < 0.3 {
+		return errors.New("lower received score than expected")
 	}
 
 	return nil

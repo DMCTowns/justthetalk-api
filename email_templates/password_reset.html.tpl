@@ -11,14 +11,14 @@
   <p>Dear {{.Username}}</p>
   <br/>
   <p>A password reset request has been received for your account. If you did not request this yourself you should contact
-  <a href="mailto:help@justthetalk.com">help@justthetalk.com</a>. If you did make this request then please follow
+  <a href="mailto:help@justthetalk.co.uk">help@justthetalk.co.uk</a>. If you did make this request then please follow
   the link below to rest you password</p>
   <br/>
-  <p><a href="https://beta.justthetalk.com/resetpassword?key={{.ResetKey}}">Reset my password...</a></p>
+  <p><a href="https://www.justthetalk.co.uk/resetpassword?key={{.ResetKey}}">Reset my password...</a></p>
   <br/>
   <p>If your e-mail client will not allow you click on links then please copy and paste the following URL into your browser address bar...</p>
   <br/>
-  <p>https://beta.justthetalk.com/resetpassword?key={{.ResetKey}}</p>
+  <p>https://www.justthetalk.co.uk/resetpassword?key={{.ResetKey}}</p>
 
   <br/>
   <p>Best Regards,</p>
