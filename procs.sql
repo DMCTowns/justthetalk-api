@@ -428,7 +428,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS find_user_by_email;
 DELIMITER //
-CREATE PROCEDURE find_user_by_email(IN $email varchar(24))
+CREATE PROCEDURE find_user_by_email(IN $email varchar(255))
 BEGIN
 
     select u.id
@@ -440,7 +440,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS check_user;
 DELIMITER //
-CREATE PROCEDURE check_user(IN $username varchar(24), IN $email varchar(24))
+CREATE PROCEDURE check_user(IN $username varchar(24), IN $email varchar(255))
 BEGIN
 
     select count(*) count_of_existing
@@ -492,7 +492,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS create_user;
 DELIMITER //
-CREATE PROCEDURE create_user(IN $email varchar(64), IN $username varchar(24), IN $password varchar(255))
+CREATE PROCEDURE create_user(IN $email varchar(255), IN $username varchar(24), IN $password varchar(255))
 BEGIN
 
     declare $last_user_id int;
@@ -2062,7 +2062,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS create_report;
 DELIMITER //
-CREATE PROCEDURE create_report(IN $post_id bigint, IN $user_id bigint, IN $name varchar(64), IN $email varchar(64), IN $body varchar(512), IN $ipaddress varchar(15))
+CREATE PROCEDURE create_report(IN $post_id bigint, IN $user_id bigint, IN $name varchar(64), IN $email varchar(255), IN $body varchar(512), IN $ipaddress varchar(15))
 BEGIN
 
     declare $current_timestamp datetime;
