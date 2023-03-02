@@ -6,5 +6,4 @@ local
 __debug_bin
 justthetalk-api.code-workspace
 .env
-deploy.sh
 .DS_Store
