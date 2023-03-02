@@ -343,7 +343,7 @@ func (p *PostProcessor) IndexAllPosts() {
 
 				var responseData map[string]interface{}
 				if err := json.NewDecoder(res.Body).Decode(&responseData); err != nil {
-					log.Fatalf("Failure to to parse response body: %s", err)
+					log.Errorf("Failure to to parse response body: %s - %s", err, res.Body)
 				}
 
 				if res.IsError() {
