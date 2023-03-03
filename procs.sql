@@ -34,7 +34,8 @@ create unique index idx_userdiscussion_userid_discussionid on user_discussion(us
 --     last_created_date datetime
 -- );
 
--- create index idx_discussion_activity_post_count on discussion_activity(post_count);
+drop index idx_discussion_activity_post_count on discussion_activity;
+create index idx_discussion_activity_post_count on discussion_activity(post_count);
 
 -- alter table ignore_user add column created_date datetime not null default UTC_TIMESTAMP();
 -- alter table user_options add column view_type varchar(16) not null default 'latest';

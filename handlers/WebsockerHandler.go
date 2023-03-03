@@ -58,6 +58,8 @@ var (
 		"https://justthetalk.co.uk":       true,
 		"https://www.justthetalk.co.uk.":      true,
 		"https://www.justthetalk.co.uk":       true,
+		"https://staging.justthetalk.co.uk.":      true,
+		"https://staging.justthetalk.co.uk":       true,
 		"http://localhost.":      true,
 		"http://localhost":       true,
 	}
